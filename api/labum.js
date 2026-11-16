@@ -9,6 +9,13 @@ const SESSION_TTL = 60 * 60 * 12;                // 12 horas
 const MAX_CONFIG = 400 * 1024;                   // configuração do formulário (sem fotos)
 const MAX_IMG = 900 * 1024;                      // foto enviada pelo editor (data URL)
 const K = s => `${EDITION}:${s}`;
+// repositório de conteúdos (só criador e admins): arquivos em pedaços de até ~700 KB (base64)
+const RK = s => `labum-repo:${s}`;               // independente da edição do formulário
+const MAX_FILE = 25 * 1024 * 1024;               // 25 MB por arquivo
+const CHUNK = 720 * 1024;                        // caracteres base64 por pedaço
+const REPO_TIPOS = ["imagem", "video", "audio", "texto", "arquivo"];
+const REPO_STATUS = ["novo", "aprovado", "usado", "descartado"];
+const clip = (v, n) => String(v == null ? "" : v).trim().slice(0, n);
 
 function env(names) {
   for (const n of names) if (process.env[n]) return process.env[n];
@@ -146,6 +153,85 @@ module.exports = async (req, res) => {
       }
       const anon = votes.map(v => [sha(EDITION + v.key), v.a]).sort((x, y) => x[0] < y[0] ? -1 : 1).map(x => ({ a: x[1] }));
       return send(200, { role: s.role, name: s.name, closed: !!st.closed, votes: anon });
+    }
+
+    // ---------- repositório (criador e admins) ----------
+    if (a.startsWith("repo")) {
+      const ano = String((req.query.ano || body.ano || "")).replace(/[^0-9a-z-]/gi, "").slice(0, 12);
+      if (!ano) return send(400, { error: "ano" });
+      const H = RK("items:" + ano);
+      const id = String(req.query.id || body.id || "").replace(/[^a-f0-9]/g, "").slice(0, 32);
+      const canEdit = m => s.role === "owner" || m.by === s.user;
+      if (a === "repolist") {
+        const [all, ys] = await Promise.all([redis("HGETALL", H), redis("HKEYS", RK("years"))]);
+        const items = [];
+        for (let i = 0; i < (all || []).length; i += 2) { const m = parse(all[i + 1]); if (m) items.push({ id: all[i], ...m, mine: m.by === s.user }); }
+        items.sort((x, y) => y.em - x.em);
+        return send(200, { ok: true, items, years: ys || [], user: s.user, role: s.role });
+      }
+      if (a === "repoadd" && req.method === "POST") {
+        const tipo = REPO_TIPOS.includes(body.tipo) ? body.tipo : "texto";
+        const size = Math.max(0, Number(body.size) || 0);
+        if (size > MAX_FILE) return send(413, { error: "arquivo_grande_demais" });
+        const chunks = tipo === "texto" ? 0 : Math.max(1, Math.min(60, Number(body.chunks) || 0));
+        const m = { tipo, titulo: clip(body.titulo, 140), texto: clip(body.texto, 4000), cat: clip(body.cat, 80), quem: clip(body.quem, 200),
+          nome: clip(body.nome, 120), mime: clip(body.mime, 80), size, chunks, recebidos: 0, status: "novo", by: s.user, byName: s.name, em: Date.now() };
+        if (tipo !== "texto" && !/^(image|video|audio)\/[a-z0-9.+-]+$|^application\/[a-z0-9.+-]+$/.test(m.mime)) return send(400, { error: "tipo_invalido" });
+        if (tipo === "texto" && !m.texto && !m.titulo) return send(400, { error: "vazio" });
+        const thumb = String(body.thumb || "");
+        const nid = crypto.randomBytes(8).toString("hex");
+        if (/^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/.test(thumb) && thumb.length < 120000) { await redis("SET", RK("thumb:" + nid), thumb); m.thumb = true; }
+        await redis("HSET", H, nid, JSON.stringify(m));
+        await redis("HSET", RK("years"), ano, "1");
+        return send(200, { ok: true, id: nid });
+      }
+      const m = id && parse(await redis("HGET", H, id));
+      if (!m) return send(404, { error: "nao_existe" });
+      if (a === "repochunk" && req.method === "POST") {
+        if (m.by !== s.user) return send(403, { error: "so_autor" });
+        const i = Number(body.i), data = String(body.data || "");
+        if (!(Number.isInteger(i) && i >= 0 && i < m.chunks) || !data || data.length > CHUNK + 8 || !/^[A-Za-z0-9+/=]+$/.test(data)) return send(400, { error: "pedaco_invalido" });
+        await redis("SET", RK(`file:${id}:${i}`), data);
+        m.recebidos = Math.max(m.recebidos || 0, i + 1);
+        await redis("HSET", H, id, JSON.stringify(m));
+        return send(200, { ok: true, completo: m.recebidos >= m.chunks });
+      }
+      if (a === "repofile") {
+        const i = Number(req.query.i) || 0;
+        if (!(i >= 0 && i < m.chunks)) return send(400, { error: "pedaco_invalido" });
+        const data = await redis("GET", RK(`file:${id}:${i}`));
+        return data ? send(200, { ok: true, data, mime: m.mime, chunks: m.chunks }) : send(404, { error: "sem_arquivo" });
+      }
+      if (a === "repothumb") {
+        const t = m.thumb && await redis("GET", RK("thumb:" + id));
+        const x = t && /^data:(image\/[a-z]+);base64,(.+)$/.exec(t);
+        if (!x) { res.status(404); return res.end(); }
+        res.setHeader("Content-Type", x[1]); res.setHeader("Cache-Control", "private, max-age=86400");
+        res.status(200); return res.end(Buffer.from(x[2], "base64"));
+      }
+      if (a === "repoupd" && req.method === "POST") {
+        if (body.status != null) { if (!REPO_STATUS.includes(body.status)) return send(400, { error: "status" }); m.status = body.status; }
+        if (body.cat != null) m.cat = clip(body.cat, 80);
+        if (body.nota != null) m.nota = clip(body.nota, 400);
+        if (body.usadoEm != null) m.usadoEm = clip(body.usadoEm, 80);
+        if (body.titulo != null || body.texto != null || body.quem != null) {
+          if (!canEdit(m)) return send(403, { error: "so_autor" });
+          if (body.titulo != null) m.titulo = clip(body.titulo, 140);
+          if (body.texto != null) m.texto = clip(body.texto, 4000);
+          if (body.quem != null) m.quem = clip(body.quem, 200);
+        }
+        m.editado = { por: s.name, em: Date.now() };
+        await redis("HSET", H, id, JSON.stringify(m));
+        return send(200, { ok: true, item: { id, ...m, mine: m.by === s.user } });
+      }
+      if (a === "repodel" && req.method === "POST") {
+        if (!canEdit(m)) return send(403, { error: "so_autor" });
+        for (let i = 0; i < (m.chunks || 0); i++) await redis("DEL", RK(`file:${id}:${i}`));
+        await redis("DEL", RK("thumb:" + id));
+        await redis("HDEL", H, id);
+        return send(200, { ok: true });
+      }
+      return send(404, { error: "acao_desconhecida" });
     }
 
     if (s.role !== "owner") return send(403, { error: "so_criador" });
