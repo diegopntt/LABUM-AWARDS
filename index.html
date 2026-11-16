@@ -792,6 +792,26 @@ button.ffp:hover .ffig{transform:translateY(-4px)}
 .install-steps .muted{font-size:13.5px;line-height:1.45}
 /* no app instalado do iPhone, respeita o entalhe */
 @supports (padding:env(safe-area-inset-top)){ .stage{padding-bottom:env(safe-area-inset-bottom)} }
+/* v4.9: opções simétricas no celular — 2 colunas, linhas da mesma altura e a última sozinha centralizada */
+@media (max-width:600px){
+  .opts:not(.long):not(.pics){grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}
+  .opts:not(.long) > :last-child:nth-child(odd){grid-column:1 / -1;justify-self:center;width:calc(50% - 4px)}
+  .opts:not(.long):not(.pics) .opt{height:100%}
+}
+.upd-pill{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:90;display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1px solid rgba(232,185,76,.6);background:#17131a;color:var(--text);font:inherit;font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.6);cursor:pointer;animation:pillIn .35s ease both}
+.upd-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+@keyframes pillIn{from{opacity:0;transform:translate(-50%,10px)}}
+.adm-year{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.adm-year select{width:auto}
+.past-banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;margin-bottom:14px;border-radius:12px;border:1px solid rgba(232,185,76,.45);background:rgba(232,185,76,.08);font-size:14px}
+.past-banner svg{flex:none}
+.past-banner .btn{margin-left:auto}
+.rp-pager{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:4px 0 12px;font-size:13.5px}
+.rp-pager.bottom{margin:14px 0 0;justify-content:center}
+.rp-pager.bottom > .muted{display:none}
+.rp-pager .pg-n{font-weight:700;font-size:13.5px;min-width:96px;text-align:center}
+.rp-pager .btn[data-pg]{min-width:40px;font-size:18px;line-height:1}
+.rp-pager select{width:auto}
 </style>
 </head>
 <body>
@@ -1741,13 +1761,44 @@ async function loadData() {
   if (r.status === 401) { stopPoll(); route(); return false; }
   if (!r.ok) { A.err = "Não consegui atualizar agora. Tentando de novo em instantes."; return false; }
   A.err = ""; A.loaded = true;
+  const sig = JSON.stringify([(r.data.votes || []).map(v => [v.key, v.t, v.n]), (r.data.admins || []).map(x => [x.user, x.name]), r.data.closed]);
+  A.changed = A.sig !== undefined && sig !== A.sig; A.sig = sig;
   A.votes = (r.data.votes || []).map(v => ({ e: EDITION_ID, n: v.n || "", t: v.t || 0, a: v.a || {}, key: v.key, _src: v.src || "site" }));
   A.admins = r.data.admins || [];
   if (typeof r.data.closed === "boolean") API.closed = r.data.closed;
   return true;
 }
-function startPoll() { stopPoll(); A.poll = setInterval(async () => { if (document.hidden) return; if (await loadData()) onData(); }, 10000); }
-function stopPoll() { clearInterval(A.poll); A.poll = null; }
+// atualização automática: só redesenha quando chegou algo novo, e espera você parar de mexer
+function startPoll() {
+  stopPoll();
+  A.poll = setInterval(async () => {
+    if (document.hidden) return;
+    if (await loadData() && A.changed) A.pending = true;
+    if (A.pending) applyPending();
+  }, 10000);
+}
+const userBusy = () => {
+  const el = document.activeElement;
+  if (el && el !== document.body && el.closest && el.closest("#app") && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return true;
+  if ($$("#app details[open]").length) return true;
+  return Date.now() - (A.lastAct || 0) < 15000;
+};
+function applyPending(force) {
+  if (!A.pending) return;
+  if (!force && userBusy()) { showPendingPill(); return; }
+  A.pending = false; $("#upd-pill")?.remove();
+  onData();
+}
+function showPendingPill() {
+  if ($("#upd-pill") || view !== "admin") return;
+  const b = document.createElement("button");
+  b.id = "upd-pill"; b.className = "upd-pill"; b.type = "button";
+  b.innerHTML = `<span class="dot"></span> Novos dados chegaram · Atualizar`;
+  b.addEventListener("click", () => applyPending(true));
+  document.body.appendChild(b);
+}
+["pointerdown", "keydown", "input", "change"].forEach(ev => document.addEventListener(ev, () => { A.lastAct = Date.now(); }, true));
+function stopPoll() { clearInterval(A.poll); A.poll = null; $("#upd-pill")?.remove(); }
 function onData() { if (view === "admin" && A.tab !== "editor" && A.tab !== "repo") refreshAdmin(); else if (view === "cerimonia" && $("#go")) renderCeremonySetup(); }
 
 // votos válidos para o formulário atual (respostas de categorias apagadas são ignoradas)
@@ -1871,6 +1922,41 @@ function rankTieNote(rk) {
   return notes;
 }
 
+/* ---- edições anteriores (somente leitura) ---- */
+const PAST_TABS = ["geral", "categorias", "ranking", "respostas"];
+async function fillYears() {
+  const sel = $("#adm-year"); if (!sel) return;
+  const H = await hallData().catch(() => null); if (!H || !$("#adm-year")) return;
+  A.H = H;
+  const past = H.editions.map(e => String(e.ano)).filter(y => y !== String(CFG.ano)).sort().reverse();
+  sel.innerHTML = `<option value="">${esc(CFG.ano)} · atual</option>` + past.map(y => `<option value="${esc(y)}" ${A.year === y ? "selected" : ""}>${esc(y)}</option>`).join("");
+  $("#adm-year-l").classList.toggle("hidden", !past.length || !PAST_TABS.includes(A.tab));
+}
+function renderPastYear(body) {
+  const H = A.H, ed = H && H.editions.find(e => String(e.ano) === A.year);
+  if (!ed) { A.year = null; return refreshAdmin(); }
+  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  const myaC = ed.cats.find(c => c.key === "membro-do-ano");
+  const banner = `<div class="past-banner">${ICON.trophy} Você está vendo a edição <b>${esc(ed.ano)}</b> (somente leitura). <button class="btn sm ghost" id="past-back">Voltar para ${esc(CFG.ano)}</button></div>`;
+  const catCard = c => { const rows = [...(c.rows || [])].sort((a, b) => b.v - a.v); const max = Math.max(1, ...rows.map(x => x.v)); const win = new Set(c.winners.map(w => w.l));
+    return `<div class="res"><div class="res-head"><div><h4>${esc(c.t)}</h4><div class="muted" style="font-size:13.5px;margin-top:2px">${c.team ? "Time: " + c.winners.map(w => esc(w.l)).join(", ") : (c.tie && !c.decisao ? "Empate: " : "Vencedor: ") + c.winners.map(w => esc(w.l)).join(" e ")}</div></div>
+      <div class="chips" style="margin:0;justify-content:flex-end"><span class="chip grey">${c.total} votos</span></div></div>
+      ${rows.map(x => `<div class="brow ${win.has(x.l) ? "win" : ""}"><span class="nm" title="${esc(x.l)}">${x.m ? avatar(x.m, "bav") : ""}${esc(x.l)}</span><span class="track"><i style="width:${x.v / max * 100}%"></i></span><span class="ct">${x.v}</span></div>`).join("")}</div>`; };
+  if (A.tab === "geral") body.innerHTML = banner + `<div class="tiles">
+      <div class="tile"><div class="v num">${ed.respostas}</div><div class="k">Votos</div></div>
+      <div class="tile"><div class="v num">${ed.nota != null ? ed.nota.toFixed(1).replace(".", ",") : "–"}</div><div class="k">Nota média da LABUM</div></div>
+      <div class="tile"><div class="v num">${ed.indicaria ? pct(ed.indicaria.sim, ed.indicaria.total) + "%" : "–"}</div><div class="k">Indicariam a LABUM</div></div>
+      <div class="tile"><div class="v">${ed.ranking && ed.ranking[0] ? esc(ed.ranking[0].m) : "–"}</div><div class="k">Campeão do ranking${ed.ranking && ed.ranking[0] ? ` · ${ed.ranking[0].p} prêmios` : ""}</div></div></div>
+    <div class="panel"><h3>Pódio do ranking geral</h3>${(ed.ranking || []).length ? rankPodium(ed.ranking, "prêmios") : `<p class="muted">Sem ranking neste ano.</p>`}
+      ${myaC ? `<p style="margin:14px 0 0"><b>Membro do ano:</b> ${myaC.winners.map(w => esc(w.l)).join(" e ")}</p>` : ""}</div>`;
+  else if (A.tab === "categorias") body.innerHTML = banner + ed.cats.map(catCard).join("");
+  else if (A.tab === "ranking") body.innerHTML = banner + `<div class="panel"><h3>Ranking geral de ${esc(ed.ano)}</h3><div class="tbl-scroll"><table class="rank"><thead><tr><th>#</th><th>Membro</th><th class="num">Prêmios</th></tr></thead><tbody>
+      ${(ed.ranking || []).map((x, i) => `<tr><td class="num">${i + 1}º</td><td><span class="rk-name">${avatar(x.m, "vav")}<b>${esc(x.m)}</b></span></td><td class="num">${x.p}</td></tr>`).join("")}</tbody></table></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Conta os prêmios individuais e de time vencidos no ano.</p></div>`;
+  else body.innerHTML = banner + `<div class="panel"><p class="muted">As respostas abertas de ${esc(ed.ano)} não ficaram guardadas no histórico. Daqui para a frente, as notas e indicações de cada edição publicada ficam salvas.</p></div>`;
+  $("#past-back")?.addEventListener("click", () => { A.year = null; const s = $("#adm-year"); if (s) s.value = ""; refreshAdmin(); });
+}
+
 /* ---- painel ---- */
 async function renderAdmin() {
   await whenApi();
@@ -1882,9 +1968,9 @@ async function renderAdmin() {
     ? [["geral", "Visão geral"], ["categorias", "Categorias"], ["ranking", "Ranking geral"], ["respostas", "Respostas abertas"], ...(API.on ? [["repo", "Repositório"], ["editor", "Editar formulário"]] : []), ["importar", "Lançar códigos"], ...(API.on ? [["admins", "Administradores"]] : []), ["config", "Ferramentas"]]
     : [["geral", "Visão geral"], ["categorias", "Categorias"], ["ranking", "Ranking geral"], ["respostas", "Respostas abertas"], ...(API.on ? [["repo", "Repositório"]] : [])];
   if (!tabs.some(t => t[0] === A.tab)) A.tab = "geral";
-  app.innerHTML = `${topbar(`<span class="who-chip">${owner ? "Criador" : "Admin"}: ${esc(s.name)}</span><button class="btn sm ghost" id="logout">Sair</button><a class="btn sm pink" href="#cerimonia">Abrir cerimônia</a>`, "max-width:1000px")}
+  app.innerHTML = `${topbar(`<span class="who-chip">${owner ? "Criador" : "Admin"}: ${esc(s.name)}</span><a class="btn sm pink" href="#cerimonia">Abrir cerimônia</a><button class="btn sm ghost" id="logout">Sair</button>`, "max-width:1000px")}
   <main class="wrap" style="max-width:1000px"><div class="sec-head" style="padding-top:8px"><div class="kicker">Apuração</div><h2>${owner ? "Painel do criador" : "Painel do administrador"}</h2>
-    <div class="row" style="justify-content:space-between"><p id="srcline" class="muted" aria-live="polite" style="margin:0"></p>${API.on ? `<button class="btn sm ghost" id="reload">Atualizar</button>` : ""}</div></div>
+    <div class="row" style="justify-content:space-between"><p id="srcline" class="muted" aria-live="polite" style="margin:0"></p><span class="row" style="gap:8px"><label class="adm-year" id="adm-year-l">Edição <select class="field sm" id="adm-year" aria-label="Edição"><option value="">${esc(CFG.ano)} · atual</option></select></label>${API.on ? `<button class="btn sm ghost" id="reload">Atualizar</button>` : ""}</span></div></div>
   <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button class="tab ${A.tab === k ? "on" : ""}" data-tab="${k}" role="tab" aria-selected="${A.tab === k}">${l}</button>`).join("")}</div>
   <div id="admin-body">${A.loaded ? "" : `<p class="muted">Carregando votos…</p>`}</div></main>`;
   $$(".tab").forEach(t => t.addEventListener("click", () => {
@@ -1893,6 +1979,8 @@ async function renderAdmin() {
   }));
   $(".tab.on")?.scrollIntoView({ block: "nearest", inline: "center" });
   $("#logout").addEventListener("click", logout);
+  fillYears();
+  $("#adm-year").addEventListener("change", e => { A.year = e.target.value || null; refreshAdmin(); });
   $("#reload")?.addEventListener("click", async e => { e.target.disabled = true; await refreshStatus(); await loadData(); RP.loaded = false; refreshAdmin(); e.target.disabled = false; toast("Atualizado"); });
   if (!A.loaded) { await loadData(); if (view !== "admin") return; }
   refreshAdmin(); startPoll();
@@ -1902,8 +1990,10 @@ function refreshAdmin() {
   const body = $("#admin-body"); if (!body || view !== "admin") return;
   const s = session(); if (!s) return renderAdmin();
   const owner = s.role === "owner";
+  $("#adm-year-l")?.classList.toggle("hidden", !A.H || A.H.editions.every(e => String(e.ano) === String(CFG.ano)) || !PAST_TABS.includes(A.tab));
   if (A.tab === "editor" && owner) return renderEditor(body);
   if (A.tab === "repo") return renderRepo(body);
+  if (A.year && PAST_TABS.includes(A.tab)) { const sl = $("#srcline"); if (sl) sl.textContent = `Histórico de ${A.year}`; return renderPastYear(body); }
   const { votes, dupes } = allVotes();
   const R = tally(votes);
   const nDemo = votes.filter(v => v._demo).length;
@@ -1932,12 +2022,26 @@ function refreshAdmin() {
           <div><b>Alguém votou com o nome de outra pessoa?</b><span class="muted"> Passe o voto para o dono certo. Quem votou continua podendo alterar o voto pelo próprio aparelho, agora com o nome certo.</span></div>
           <div class="row"><label class="sr" for="ra-from">Voto de</label><select class="field sm" id="ra-from">${votes.filter(v => !v._demo && v.key).map(v => `<option value="${esc(v.key)}">Voto de ${esc(v.n)}</option>`).join("")}</select>
             <span class="muted">passa a ser de</span>
-            <label class="sr" for="ra-to">Novo dono</label><select class="field sm" id="ra-to">${MEMBROS.map(n => `<option>${esc(n)}</option>`).join("")}</select>
+            <label class="sr" for="ra-to">Novo dono</label><select class="field sm" id="ra-to"></select>
             <button class="btn sm gold" id="ra-go">Trocar dono</button></div>
           <div class="msg" id="ra-msg" aria-live="polite"></div></div>` : ""}
         ${faltam.length && votes.length ? `<div class="missing"><span class="muted">Ainda não votaram:</span> ${faltam.map(n => `<span class="voter ghosted">${avatar(n, "vav")}${esc(n)}</span>`).join("")}</div>` : ""}
       </div>` : `<div class="panel"><h3>Seus poderes</h3><p class="muted">Você vê os resultados de forma anônima e pode conduzir a cerimônia. Ver quem votou em quem, apagar ou lançar votos, editar o formulário, encerrar a votação e gerenciar administradores são exclusivos do criador.</p></div>`}
       <div class="row"><a class="btn pink" href="#cerimonia">Abrir cerimônia de revelação</a></div>`;
+    // destino: todos menos o próprio dono do voto; quem já votou fica indisponível
+    const raFill = () => {
+      const sel = $("#ra-to"), from = $("#ra-from"); if (!sel || !from) return;
+      const fromName = votes.find(v => v.key === from.value)?.n || "";
+      const voted = new Set(votes.filter(v => !v._demo).map(v => norm(v.n)));
+      const keep = sel.value;
+      const opts = MEMBROS.filter(n => norm(n) !== norm(fromName));
+      sel.innerHTML = opts.map(n => `<option value="${esc(n)}" ${voted.has(norm(n)) ? "disabled" : ""}>${esc(n)}${voted.has(norm(n)) ? " (já votou)" : ""}</option>`).join("");
+      const free = opts.filter(n => !voted.has(norm(n)));
+      sel.value = free.includes(keep) ? keep : (free[0] || "");
+      $("#ra-go").disabled = !free.length;
+      $("#ra-msg").className = "msg"; $("#ra-msg").textContent = free.length ? "" : "Todos os outros membros já votaram. Apague um voto antes de trocar.";
+    };
+    $("#ra-from")?.addEventListener("change", raFill); raFill();
     $("#ra-go")?.addEventListener("click", async e => {
       const key = $("#ra-from").value, to = $("#ra-to").value, m = $("#ra-msg");
       const fromName = votes.find(v => v.key === key)?.n || "";
@@ -2170,7 +2274,7 @@ async function publishResults() {
   if (!payload.votos) { toast("Ainda não há votos para publicar."); return false; }
   const r = await api("publish", { method: "POST", auth: true, body: { results: payload } });
   if (!r.ok) { toast("Não consegui publicar. Tente de novo."); return false; }
-  API.published = true; return true;
+  API.published = true; HALL_STATE.extra = null; HALL_STATE.arch = null; return true;
 }
 async function renderResults() {
   app.innerHTML = `${topbar(`<a class="btn sm ghost" href="#">Início</a>`)}<main class="wrap"><p class="muted" style="margin-top:40px">Carregando resultados…</p></main>`;
@@ -2239,24 +2343,29 @@ const CUR_KEY = { "membro-ano": "membro-do-ano" };
 const HALL_CHAMP = { 2022: "Enzo", 2024: "Ueslei" };
 const HALL_STATE = { year: null, extra: null };
 
+// resultado publicado pelo site → edição no formato do histórico
+function payloadToEd(P) {
+  const ed = { ano: +P.ano || P.ano, respostas: P.votos, atual: String(P.ano) === String(CFG.ano), cats: [] };
+  (P.cats || []).forEach(c => {
+    const member = c.rows.every(x => x.ref) || c.tipo === "pick";
+    const win = c.winners.map(l => { const x = c.rows.find(r => r.l === l) || { n: 0 }; return { l, m: x.ref || null, v: x.n }; });
+    ed.cats.push({ key: CUR_KEY[c.id] || c.id, t: c.t, team: c.tipo === "pick", member, tie: c.tie, total: c.total, winners: win, rows: c.rows.map(x => ({ l: x.l, m: x.ref || null, v: x.n })) });
+  });
+  if (P.aval) { ed.nota = P.aval.nota; if (P.aval.ind) ed.indicaria = { sim: P.aval.sim, total: P.aval.ind }; }
+  return ed;
+}
 async function hallData() {
   const H = clone(HALL);
-  // edição atual (publicada) entra como mais uma edição, se ainda não estiver no histórico
+  // edições publicadas pelo site (arquivo) e a atual publicada entram como mais edições, se ainda não estiverem no histórico
+  if (!HALL_STATE.arch && API.on) { const r = await api("archives"); HALL_STATE.arch = r.ok ? r.data.archives || {} : {}; }
   if (!HALL_STATE.extra && API.on && API.published) {
     const r = await api("results");
     if (r.ok) HALL_STATE.extra = r.data.results;
   }
-  const P = HALL_STATE.extra;
-  if (P && !H.editions.some(e => String(e.ano) === String(P.ano))) {
-    const ed = { ano: +P.ano || P.ano, respostas: P.votos, atual: true, cats: [] };
-    P.cats.forEach(c => {
-      const member = c.rows.every(x => x.ref) || c.tipo === "pick";
-      const win = c.winners.map(l => { const x = c.rows.find(r => r.l === l) || { n: 0 }; return { l, m: x.ref || null, v: x.n }; });
-      ed.cats.push({ key: CUR_KEY[c.id] || c.id, t: c.t, team: c.tipo === "pick", member, tie: c.tie, total: c.total, winners: win, rows: c.rows.map(x => ({ l: x.l, m: x.ref || null, v: x.n })) });
-    });
-    if (P.aval) { ed.nota = P.aval.nota; if (P.aval.ind) ed.indicaria = { sim: P.aval.sim, total: P.aval.ind }; }
-    H.editions.push(ed);
-  }
+  const payloads = { ...(HALL_STATE.arch || {}) };
+  if (HALL_STATE.extra) payloads[HALL_STATE.extra.ano] = HALL_STATE.extra;
+  Object.values(payloads).forEach(P => { if (P && !H.editions.some(e => String(e.ano) === String(P.ano))) H.editions.push(payloadToEd(P)); });
+  H.editions.sort((a, b) => (+a.ano || 0) - (+b.ano || 0));
   // recalcula troféus, campeões, dinastias e recordes com todas as edições
   const T = new Map();
   const tro = m => { if (!T.has(m)) T.set(m, { m, total: 0, glory: 0, shame: 0, anos: {}, cats: [] }); return T.get(m); };
@@ -2814,7 +2923,7 @@ function openMember(H, m) {
    REPOSITÓRIO — conteúdos guardados para montar o formulário de cada edição.
    Só o criador e os admins veem. Arquivos ficam no banco, em pedaços.
    ===================================================================== */
-const RP = { ano: null, items: [], years: [], loaded: false, f: { cat: "", status: "", tipo: "", q: "" }, blobs: new Map(), thumbs: new Map(), up: null, newCat: false };
+const RP = { ano: null, items: [], years: [], loaded: false, f: { cat: "", status: "", mem: "", q: "" }, page: 1, per: (() => { try { return +localStorage.getItem("labum-rp-per") === 20 ? 20 : 10; } catch { return 10; } })(), blobs: new Map(), thumbs: new Map(), up: null, newCat: false };
 const RP_CHUNK = 700000;               // caracteres base64 por pedaço (múltiplo de 4)
 const RP_MAX = 25 * 1024 * 1024;
 const RP_STATUS = { novo: "Para avaliar", aprovado: "Aprovado", usado: "Usado no formulário", descartado: "Descartado" };
@@ -2896,9 +3005,17 @@ async function renderRepo(body) {
   const owner = session()?.role === "owner";
   const cats = rpCats();
   const F = RP.f;
-  const list = RP.items.filter(it => (!F.cat || (F.cat === "-" ? !it.cat : it.cat === F.cat)) && (!F.status || it.status === F.status) && (!F.tipo || it.tipo === F.tipo)
+  const list = RP.items.filter(it => (!F.cat || (F.cat === "-" ? !it.cat : it.cat === F.cat)) && (!F.status || it.status === F.status) && (!F.mem || rpQuem(it.quem).includes(F.mem))
     && (!F.q || norm([it.titulo, it.texto, it.cat, it.quem, it.byName, it.nome].join(" ")).includes(norm(F.q))));
   const used = RP.items.reduce((s, it) => s + (it.size || 0), 0);
+  // páginas
+  const pages = Math.max(1, Math.ceil(list.length / RP.per));
+  RP.page = Math.min(Math.max(1, RP.page), pages);
+  const pageItems = list.slice((RP.page - 1) * RP.per, RP.page * RP.per);
+  const pager = pos => !list.length ? "" : `<div class="rp-pager ${pos}">
+    <span class="muted">${(RP.page - 1) * RP.per + 1}–${Math.min(list.length, RP.page * RP.per)} de ${list.length}</span>
+    <span class="row" style="gap:6px">${pages > 1 ? `<button class="btn sm ghost" data-pg="${RP.page - 1}" ${RP.page === 1 ? "disabled" : ""} aria-label="Página anterior">‹</button><span class="pg-n">Página ${RP.page} de ${pages}</span><button class="btn sm ghost" data-pg="${RP.page + 1}" ${RP.page === pages ? "disabled" : ""} aria-label="Próxima página">›</button>` : ""}
+    ${pos === "top" ? `<select class="field sm" data-per aria-label="Itens por página"><option value="10" ${RP.per === 10 ? "selected" : ""}>10 por página</option><option value="20" ${RP.per === 20 ? "selected" : ""}>20 por página</option></select>` : ""}</span></div>`;
   const byCat = new Map(); RP.items.forEach(it => { const k = it.cat || "-"; byCat.set(k, (byCat.get(k) || 0) + 1); });
   const catChips = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
   const extraCats = [...new Set(RP.items.map(it => it.cat).filter(c => c && !cats.includes(c)))];
@@ -2908,6 +3025,7 @@ async function renderRepo(body) {
       <div><h3 style="margin:0 0 4px">Repositório ${esc(RP.ano)}</h3><p class="muted" style="margin:0">Prints, vídeos, áudios e mensagens guardados para a premiação. Só a organização vê. Nada se perde quando alguém limpa as mídias do WhatsApp.</p></div>
       <label class="rp-year">Edição <select class="field sm" id="rp-year">${rpYearOptions().map(y => `<option ${y === RP.ano ? "selected" : ""}>${esc(y)}</option>`).join("")}</select></label>
     </div>
+    <div class="row" style="margin-top:10px;gap:8px">${RP.items.some(it => it.tipo !== "texto" || it.texto) ? `<button class="btn sm ghost" id="rp-zip">${ICON.down} Baixar tudo de ${esc(RP.ano)} (.zip)</button>` : ""}<span id="rp-zip-msg" class="muted" aria-live="polite" style="font-size:13px"></span></div>
     <div class="rp-stats"><span><b class="num">${RP.items.length}</b> conteúdos</span><span><b class="num">${RP.items.filter(i => i.status === "novo").length}</b> para avaliar</span><span><b class="num">${RP.items.filter(i => i.status === "aprovado").length}</b> aprovados</span><span><b class="num">${rpSize(used)}</b> usados</span></div>
   </div>
 
@@ -2932,10 +3050,12 @@ async function renderRepo(body) {
   <div class="rp-filters">
     <input class="field sm" id="rp-q" placeholder="Buscar…" value="${esc(F.q)}" aria-label="Buscar">
     <select class="field sm" id="rp-fs" aria-label="Situação"><option value="">Todas as situações</option>${Object.entries(RP_STATUS).map(([k, l]) => `<option value="${k}" ${F.status === k ? "selected" : ""}>${l}</option>`).join("")}</select>
-    <select class="field sm" id="rp-ft" aria-label="Tipo"><option value="">Todos os tipos</option>${Object.entries(RP_TIPO).map(([k, l]) => `<option value="${k}" ${F.tipo === k ? "selected" : ""}>${l}</option>`).join("")}</select>
+    <select class="field sm" id="rp-fm" aria-label="Membro"><option value="">Todos os membros</option>${MEMBROS.map(m => `<option ${F.mem === m ? "selected" : ""}>${esc(m)}</option>`).join("")}</select>
   </div>
   ${catChips.length ? `<div class="rp-cats"><button class="chipbtn ${!F.cat ? "on" : ""}" data-fcat="">Todas · ${RP.items.length}</button>${catChips.map(([c, n]) => `<button class="chipbtn ${F.cat === c ? "on" : ""}" data-fcat="${esc(c)}">${c === "-" ? "Sem categoria" : esc(c)} · ${n}</button>`).join("")}</div>` : ""}
-  <div class="rp-list">${list.length ? list.map(it => rpCard(it, owner)).join("") : `<div class="panel muted" style="text-align:center">${RP.items.length ? "Nada com esses filtros." : "O repositório ainda está vazio. Guarde o primeiro conteúdo aí em cima."}</div>`}</div>`;
+  ${pager("top")}
+  <div class="rp-list">${list.length ? pageItems.map(it => rpCard(it, owner)).join("") : `<div class="panel muted" style="text-align:center">${RP.items.length ? "Nada com esses filtros." : "O repositório ainda está vazio. Guarde o primeiro conteúdo aí em cima."}</div>`}</div>
+  ${pager("bottom")}`;
   bindRepo(body, owner);
 }
 
@@ -3149,10 +3269,13 @@ function bindRepo(body, owner) {
     if (ok) { toast(ok > 1 ? `${ok} conteúdos guardados` : "Guardado no repositório"); RP.loaded = false; rerender(); }
   });
 
-  const refilter = () => rerender();
+  const refilter = () => { RP.page = 1; rerender(); };
   $("#rp-q").addEventListener("change", e => { RP.f.q = e.target.value; refilter(); });
   $("#rp-fs").addEventListener("change", e => { RP.f.status = e.target.value; refilter(); });
-  $("#rp-ft").addEventListener("change", e => { RP.f.tipo = e.target.value; refilter(); });
+  $("#rp-fm").addEventListener("change", e => { RP.f.mem = e.target.value; refilter(); });
+  $$("[data-pg]", body).forEach(b => b.addEventListener("click", () => { RP.page = +b.dataset.pg; rerender(); $(".rp-pager.top")?.scrollIntoView({ block: "start", behavior: "smooth" }); }));
+  $("[data-per]", body)?.addEventListener("change", e => { RP.per = +e.target.value; RP.page = 1; try { localStorage.setItem("labum-rp-per", RP.per); } catch {} rerender(); });
+  $("#rp-zip")?.addEventListener("click", rpZipAll);
   $$("[data-fcat]", body).forEach(b => b.addEventListener("click", () => { RP.f.cat = b.dataset.fcat; refilter(); }));
 
   const upd = async (id, patch) => {
@@ -3211,6 +3334,66 @@ function bindRepo(body, owner) {
     RP.items = RP.items.filter(x => x.id !== b.dataset.del); toast("Excluído"); rerender();
   }));
   rpThumbs(body);
+}
+
+/* ---------- baixar tudo (.zip) ---------- */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = u => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC_T[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+// zip sem compressão (fotos, vídeos e áudios já são comprimidos)
+function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  files.forEach(f => {
+    const name = enc.encode(f.name), data = f.data, crc = crc32(data), d = new Date(f.date || Date.now());
+    const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), date = ((Math.max(1980, d.getFullYear()) - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true); h.setUint16(10, time, true); h.setUint16(12, date, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+    parts.push(h.buffer, name, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true); c.setUint16(12, time, true); c.setUint16(14, date, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    central.push(c.buffer, name);
+    off += 30 + name.length + data.length;
+  });
+  const cdSize = central.reduce((s, b) => s + (b.byteLength ?? b.length), 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, e.buffer], { type: "application/zip" });
+}
+const slugName = t => norm(t || "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "sem-categoria";
+const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "video/mp4": "mp4", "video/quicktime": "mov", "video/webm": "webm", "video/3gpp": "3gp", "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "aac", "audio/wav": "wav", "audio/webm": "weba", "application/pdf": "pdf" };
+async function rpZipAll() {
+  const btn = $("#rp-zip"), msg = $("#rp-zip-msg"); if (!btn) return;
+  btn.disabled = true;
+  const enc = new TextEncoder(), files = [], csv = [["data", "tipo", "categoria", "membros", "situação", "enviado por", "mensagem/contexto", "arquivo"]];
+  const txt = [];
+  const items = [...RP.items].sort((a, b) => a.em - b.em);
+  let n = 0, falhas = 0;
+  for (const it of items) {
+    n++; msg.textContent = `Juntando ${n} de ${items.length}…`;
+    const dia = new Date(it.em).toISOString().slice(0, 10);
+    let arquivo = "";
+    if (it.tipo !== "texto" && (it.recebidos || 0) >= it.chunks) {
+      try {
+        const { blob } = await rpBlob(it);
+        const ext = EXT[it.mime] || (/\.([a-z0-9]{2,5})$/i.exec(it.nome || "") || [])[1] || "bin";
+        arquivo = `${slugName(it.cat)}/${dia}_${slugName(it.quem || it.tipo)}_${it.id.slice(0, 6)}.${ext}`;
+        files.push({ name: arquivo, data: new Uint8Array(await blob.arrayBuffer()), date: it.em });
+      } catch { falhas++; arquivo = "(não baixou)"; }
+    }
+    if (it.texto || it.titulo) txt.push(`[${dia}] ${it.cat || "Sem categoria"}${it.quem ? " · " + it.quem : ""}\n${[it.titulo, it.texto].filter(Boolean).join(" — ")}${arquivo ? "\nArquivo: " + arquivo : ""}\n`);
+    csv.push([dia, RP_TIPO[it.tipo] || it.tipo, it.cat || "", it.quem || "", RP_STATUS[it.status] || it.status, it.byName || it.by || "", [it.titulo, it.texto].filter(Boolean).join(" — "), arquivo]);
+  }
+  const csvTxt = "\uFEFF" + csv.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+  files.unshift({ name: "conteudos.csv", data: enc.encode(csvTxt), date: Date.now() });
+  if (txt.length) files.unshift({ name: "mensagens.txt", data: enc.encode(txt.join("\n")), date: Date.now() });
+  msg.textContent = "Montando o .zip…";
+  const zip = makeZip(files);
+  const url = URL.createObjectURL(zip); const a = document.createElement("a");
+  a.href = url; a.download = `labum-repositorio-${RP.ano}.zip`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  btn.disabled = false;
+  msg.textContent = `${items.length} conteúdos · ${rpSize(zip.size)}${falhas ? ` · ${falhas} arquivo(s) não baixaram` : ""}`;
 }
 
 /* =====================================================================

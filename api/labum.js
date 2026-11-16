@@ -120,6 +120,12 @@ module.exports = async (req, res) => {
       res.setHeader("Cache-Control", "public, max-age=86400");
       return res.status(200).json({ ok: true, data, mime: m.mime, chunks: m.chunks });
     }
+    // resultados de todas as edições já publicadas (painel por ano e Hall da Fama)
+    if (a === "archives") {
+      const all = await redis("HGETALL", "labum-archive") || [];
+      const out = {}; for (let i = 0; i < all.length; i += 2) { const p = parse(all[i + 1]); if (p) out[all[i]] = p; }
+      return send(200, { ok: true, archives: out });
+    }
     if (a === "results") {
       const r = parse(await redis("GET", K("results")));
       return r ? send(200, { ok: true, results: r }) : send(404, { error: "nao_publicado" });
@@ -321,6 +327,9 @@ module.exports = async (req, res) => {
       const txt = JSON.stringify(body.results);
       if (txt.length > MAX_CONFIG) return send(413, { error: "grande_demais" });
       await redis("SET", K("results"), txt);
+      // guarda também no arquivo de edições (não some quando os votos forem zerados para o ano seguinte)
+      const ano = String(body.results.ano || "").replace(/[^0-9a-z-]/gi, "").slice(0, 12);
+      if (ano) await redis("HSET", "labum-archive", ano, txt);
       return send(200, { ok: true, published: true });
     }
     if (a === "addadmin" && req.method === "POST") {
