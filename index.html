@@ -318,7 +318,7 @@ table.rank tr.top td{background:rgba(232,185,76,.06)}
 .pod .hid .who,.pod .hid .meta{visibility:hidden}
 .st-help{font-size:13px;color:var(--muted)}
 .big-stat{font-family:var(--display);font-size:clamp(70px,12vw,170px);line-height:.9;color:var(--gold)}
-#confetti{position:fixed;inset:0;pointer-events:none;z-index:120}
+#confetti{position:fixed;inset:0;width:100vw;height:100vh;width:100dvw;height:100dvh;pointer-events:none;z-index:120}
 .setup{max-width:560px;width:100%;text-align:left;background:rgba(21,19,23,.92);border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:24px}
 .setup label{display:block;font-weight:600;margin:10px 0 6px}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--text);color:#141018;padding:10px 16px;border-radius:999px;font-weight:700;z-index:400;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:90vw;text-align:center}
@@ -770,6 +770,11 @@ button.ffp:hover .ffig{transform:translateY(-4px)}
 .zoom{font-size:14px;line-height:1}
 .lb-media{display:grid;place-items:center;min-height:120px}
 .lb-media video{max-width:min(92vw,1000px);max-height:66vh;border-radius:10px;background:#000}
+/* melhor × pior do mesmo jogo */
+.opt.blocked:disabled{opacity:.32;cursor:not-allowed;filter:grayscale(.6)}
+.opt.blocked:disabled .lbl{text-decoration:line-through;text-decoration-color:rgba(255,255,255,.35)}
+.pair-note{margin:10px 0 0;font-size:13px;color:var(--muted);font-weight:600}
+.pair-note.bad{color:#ff8fb8}
 </style>
 </head>
 <body>
@@ -1006,7 +1011,20 @@ const uid = p => p + "-" + Date.now().toString(36).slice(-4) + Math.random().toS
 /* =====================================================================
    Configuração ativa (padrão ou a salva pelo criador no editor)
    ===================================================================== */
-let CFG, SECOES, PERGUNTAS, QMAP, OBRIG, MEMBROS, MEMB, STEPS;
+let CFG, SECOES, PERGUNTAS, QMAP, OBRIG, MEMBROS, MEMB, STEPS, PAIR = {};
+// "Melhor X" × "Pior X" com membros como opções (ex.: melhor e pior player de Free Fire): não pode o mesmo membro nos dois
+function melhorPiorPairs(qs, membros) {
+  const ms = new Set((membros || []).map(norm));
+  const isMem = q => q.tipo === "single" && Array.isArray(q.o) && q.o.length && q.o.every(o => o.ref || ms.has(norm(o.l)));
+  const key = (q, w) => { const m = new RegExp("^" + w + "\\s+(.+)$").exec(norm(q.t)); return m ? m[1] : null; };
+  const out = {};
+  qs.filter(isMem).forEach(a => { const k = key(a, "melhor"); if (!k) return; const b = qs.find(x => x !== a && isMem(x) && key(x, "pior") === k); if (b) { out[a.id] = b.id; out[b.id] = a.id; } });
+  return out;
+}
+// identidade da escolha (o membro ligado à opção, ou o texto dela)
+const choiceKey = (q, v) => { const o = q && q.o && q.o.find(x => x.l === v); return o ? norm(optRef(o) || o.l) : null; };
+// a escolha desta categoria repete a da categoria oposta?
+function pairConflict(q, a) { const pid = PAIR[q.id]; if (!pid || a[q.id] == null || a[pid] == null) return false; const k = choiceKey(q, a[q.id]); return !!k && k === choiceKey(QMAP[pid], a[pid]); }
 function applyConfig(cfg) {
   CFG = cfg;
   const c = clone(cfg);
@@ -1026,6 +1044,7 @@ function applyConfig(cfg) {
     });
   });
   QMAP = Object.fromEntries(PERGUNTAS.map(q => [q.id, q]));
+  PAIR = melhorPiorPairs(PERGUNTAS, MEMBROS);
   OBRIG = PERGUNTAS.filter(q => !q.opcional);
   STEPS = [{ id: "id", nome: "Você" }, ...SECOES.map(s => ({ id: s.id, nome: s.nome })), { id: "revisao", nome: "Revisão" }];
   document.title = `LABUM Awards ${CFG.ano}`;
@@ -1161,6 +1180,8 @@ function isAnswered(q, a = V.a) {
   if (q.tipo === "pick") return Array.isArray(v) && v.length === q.n && v.every(x => q.o.some(o => o.l === x));
   if (q.tipo === "text" || q.tipo === "long") return !!(v && String(v).trim());
   if (q.tipo === "scale") return Number.isInteger(v);
+  // "pior" que repete o "melhor" (ou vice-versa) não vale: o segundo da dupla fica pendente
+  if (PAIR[q.id] && pairConflict(q, a) && PERGUNTAS.indexOf(q) > PERGUNTAS.indexOf(QMAP[PAIR[q.id]])) return false;
   return v != null && v !== "" && q.o.some(o => o.l === v);
 }
 const reqTotal = () => OBRIG.length + 1;
@@ -1344,6 +1365,7 @@ function renderQuestion(q) {
       ${q.nota ? `<div class="q-note">${esc(q.nota)}</div>` : ""}
     </div></div>
     ${inner}
+    ${PAIR[q.id] ? `<p class="pair-note hidden" id="pn-${q.id}" aria-live="polite"></p>` : ""}
     <div class="q-err hidden" role="alert">${q.tipo === "pick" ? `Escolha exatamente ${q.n}.` : "Essa é obrigatória."}</div>
   </section>`;
 }
@@ -1385,6 +1407,7 @@ function bindVote() {
   }));
   // perguntas
   $$(".opt[data-q]").forEach(b => b.addEventListener("click", () => choose(b)));
+  Object.keys(PAIR).forEach(id => { if ($("#q-" + id)) pairUI(QMAP[id]); });
   $$(".zoom").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); openLightbox(QMAP[b.dataset.zoom], +b.dataset.i); }));
   $$(".field[data-q]").forEach(f => f.addEventListener("input", () => { V.a[f.dataset.q] = f.value; saveDraft(); $("#q-" + f.dataset.q).classList.toggle("answered", !!f.value.trim()); updateMeta(); }));
   $("#submit")?.addEventListener("click", submitVote);
@@ -1415,6 +1438,7 @@ function choose(btn) {
   } else {
     V.a[q.id] = q.tipo === "scale" ? +btn.dataset.n : btn.dataset.v;
     $$(".opt", card).forEach(o => o.setAttribute("aria-checked", o === btn));
+    if (PAIR[q.id]) { const p = QMAP[PAIR[q.id]]; pairUI(p); pairUI(q); const pc = $("#q-" + p.id); if (pc) { const okp = isAnswered(p); pc.classList.toggle("answered", okp); if (okp) { pc.classList.remove("err"); $(".q-err", pc)?.classList.add("hidden"); } } }
   }
   saveDraft();
   const ok = isAnswered(q);
@@ -1432,6 +1456,24 @@ function choose(btn) {
       else $(".navbar")?.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "center" });
     }, 260);
   }
+}
+// bloqueia, nesta categoria, o membro já escolhido na categoria oposta (melhor × pior do mesmo jogo)
+function pairUI(q) {
+  const card = $("#q-" + q.id), p = QMAP[PAIR[q.id]]; if (!card || !p) return;
+  const k = choiceKey(p, V.a[p.id]); const note = $("#pn-" + q.id);
+  let blocked = null;
+  $$(".opt[data-q]", card).forEach(o => {
+    const hit = !!k && choiceKey(q, o.dataset.v) === k;
+    const checked = o.getAttribute("aria-checked") === "true";
+    o.classList.toggle("blocked", hit);
+    o.disabled = hit && !checked;
+    if (hit) blocked = o.dataset.v;
+  });
+  if (!note) return;
+  const conflict = pairConflict(q, V.a) && !isAnswered(q);
+  note.classList.toggle("hidden", !blocked);
+  note.classList.toggle("bad", conflict);
+  note.textContent = !blocked ? "" : conflict ? `${blocked} também está no seu voto de "${p.t}". Escolha outra pessoa aqui.` : `${blocked} já é o seu voto em "${p.t}", então não dá para escolher aqui.`;
 }
 function nextStep() {
   const s = STEPS[V.step];
@@ -1464,7 +1506,8 @@ async function submitVote() {
       const r = await api("vote", { method: "POST", body: { vote, device: deviceToken() } });
       if (r.ok) saved = true;
       else if (r.status === 409) { err.innerHTML = `Já existe um voto com o nome <b>${esc(vote.n)}</b> enviado de outro aparelho. Se foi você em outro celular, vote por lá. Se não foi, fale com o organizador para liberar o nome.`; err.classList.remove("hidden"); btn.disabled = false; btn.textContent = "Enviar meu voto"; return; }
-      else if (r.status === 403) { API.closed = true; err.textContent = "A votação foi encerrada pela organização."; err.classList.remove("hidden"); btn.textContent = "Votação encerrada"; return; }
+      else if (r.status === 400 && r.data && r.data.error === "melhor_pior_igual") { err.textContent = "Você votou no mesmo membro como melhor e pior player do mesmo jogo. Ajuste antes de enviar."; err.classList.remove("hidden"); btn.disabled = false; btn.textContent = "Enviar meu voto"; return; }
+            else if (r.status === 403) { API.closed = true; err.textContent = "A votação foi encerrada pela organização."; err.classList.remove("hidden"); btn.textContent = "Votação encerrada"; return; }
     }
     LS.set(K.sent, { name: vote.n, code, saved, t: vote.t });
     if (saved && MEMB.has(vote.n)) API.votedMembers.add(vote.n);
@@ -3562,7 +3605,7 @@ const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twe
 function confetti(ms = 2500, opts = {}) {
   if (C.fx === false) return;
   const cv = $("#confetti"); cv.classList.remove("hidden");
-  const ctx = cv.getContext("2d"); const dpr = window.devicePixelRatio || 1;
+  const ctx = cv.getContext("2d"); const dpr = Math.min(2, window.devicePixelRatio || 1); // celulares têm densidade alta; 2 já fica nítido e mais leve
   const W = innerWidth, H = innerHeight;
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = W * dpr; cv.height = H * dpr; }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -3581,12 +3624,14 @@ function confetti(ms = 2500, opts = {}) {
   for (let i = 0; i < ne; i++) confP.push(mk(i, emojis[i % emojis.length]));
   confEnd = Math.max(confEnd, now + ms);
   if (confRAF) return;
+  let last = 0;
   const tick = t => {
+    const k = last ? Math.min(3, (t - last) / 16.67) : 1; last = t; // mesma velocidade em telas de 60 e 120 Hz
     ctx.clearRect(0, 0, W, H);
     confP = confP.filter(p => p.y < H + 80 || t < p.d);
     confP.forEach(p => {
       if (t < p.d) return;
-      p.vy += H / 2600; p.vx *= .985; p.vy *= .995; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      p.vy += H / 2600 * k; p.vx *= Math.pow(.985, k); p.vy *= Math.pow(.995, k); p.x += p.vx * k; p.y += p.vy * k; p.r += p.vr * k;
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
       if (p.e) { ctx.font = `${p.s}px ${EMOJI_FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(p.e, 0, 0); }
       else { ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); }

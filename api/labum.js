@@ -57,6 +57,23 @@ function cleanVote(v, src) {
   return { e: EDITION, n, t: Number(v.t) || Date.now(), a, src };
 }
 
+// melhor × pior do mesmo jogo (membros como opções): o mesmo membro não pode estar nos dois
+const DEFAULT_PAIRS = [["melhor-ff", "pior-ff"], ["melhor-lol", "pior-lol"], ["melhor-cr", "pior-cr"]];
+function melhorPiorPairs(cfg) {
+  if (!cfg || !Array.isArray(cfg.secoes)) return DEFAULT_PAIRS;
+  const ms = new Set((cfg.membros || []).map(m => norm(m.n)));
+  const qs = cfg.secoes.flatMap(x => x.perguntas || []);
+  const isMem = q => (q.tipo || "single") === "single" && Array.isArray(q.o) && q.o.length && q.o.every(o => o.ref || ms.has(norm(o.l)));
+  const key = (q, w) => { const m = new RegExp("^" + w + "\\s+(.+)$").exec(norm(q.t)); return m ? m[1] : null; };
+  const out = [];
+  qs.filter(isMem).forEach(a => { const k = key(a, "melhor"); if (!k) return; const b = qs.find(x => x !== a && isMem(x) && key(x, "pior") === k); if (b) out.push([a.id, b.id, a, b]); });
+  return out;
+}
+function pairClash(v, cfg) {
+  const ident = (q, val) => { if (!q) return norm(val); const o = q.o.find(x => x.l === val); return o ? norm(o.ref || o.l) : norm(val); };
+  return melhorPiorPairs(cfg).some(([x, y, qa, qb]) => typeof v.a[x] === "string" && typeof v.a[y] === "string" && ident(qa, v.a[x]) === ident(qb, v.a[y]));
+}
+
 async function session(req) {
   const h = req.headers.authorization || "";
   const tok = h.startsWith("Bearer ") ? h.slice(7) : "";
@@ -114,6 +131,7 @@ module.exports = async (req, res) => {
       if (devTok.length < 20) return send(400, { error: "aparelho_invalido" });
       const v = cleanVote(body.vote, "site");
       if (!v) return send(400, { error: "voto_invalido" });
+      if (pairClash(v, parse(await redis("GET", K("config"))))) return send(400, { error: "melhor_pior_igual" });
       const key = norm(v.n);
       const prev = parse(await redis("HGET", K("votes"), key));
       if (prev && prev.dev !== sha(devTok)) return send(409, { error: "nome_em_uso" });
