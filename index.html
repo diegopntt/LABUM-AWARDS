@@ -341,7 +341,7 @@ table.rank tr.top td{background:rgba(232,185,76,.06)}
   .lb .nav{top:auto;bottom:16px;transform:none}
 }
 @media (prefers-reduced-motion:reduce){
-  *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  body:not(.ceremony) *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
 
 /* =========================================================
@@ -735,7 +735,7 @@ button.ffp:hover .ffig{transform:translateY(-4px)}
 /* transição sutil entre telas da cerimônia */
 .st-inner.st-enter{animation:stEnter .55s cubic-bezier(.2,.7,.3,1) both}
 @keyframes stEnter{from{opacity:0;transform:translateY(10px)}}
-@media (prefers-reduced-motion:reduce){.st-inner.st-enter{animation:none}}
+
 /* v4.3: revisão final */
 .review-list li.miss{cursor:pointer;transition:background .15s}
 .review-list li.miss:hover,.review-list li.miss:focus-visible{background:rgba(255,61,154,.08)}
@@ -745,6 +745,31 @@ button.ffp:hover .ffig{transform:translateY(-4px)}
   .field,.field.sm,select.field,textarea.field{font-size:16px}
   .voter button{min-width:30px;min-height:30px;font-size:17px}
 }
+
+/* v4.5: 2º e 3º lugar entram suaves; no celular, um pouco menores */
+@keyframes runItem{from{opacity:0;transform:translateY(8px) scale(.97)}}
+@media (max-width:640px){
+  .runner{animation:runItem 1s cubic-bezier(.22,.8,.3,1) both}
+  .runner.r3{animation-delay:.45s}
+  .runners{animation:runInM 1.1s cubic-bezier(.22,.8,.3,1) both;overflow:hidden;gap:6px}
+  @keyframes runInM{from{opacity:0;max-height:0;transform:translateY(8px)}to{opacity:1;max-height:220px}}
+  .runner{padding:5px 12px 5px 8px;gap:8px;font-size:13px}
+  .runner img{width:28px;height:28px}
+  .runner .rpos{font-size:18px;min-width:24px}
+  .runner .rname{font-size:13.5px}
+  .runner .rvotes{font-size:12px}
+}
+.pix-v{font-weight:800;color:var(--gold)}
+.pix-tbl summary{cursor:pointer;list-style:none}
+.pix-tbl summary::-webkit-details-marker{display:none}
+.pix-itens{list-style:none;padding:6px 0 2px 34px;margin:0;display:grid;gap:3px;font-size:12.5px;color:var(--muted)}
+.pix-itens li{display:flex;justify-content:space-between;gap:14px}
+.pix-tbl tfoot td{border-top:1px solid var(--line);padding-top:10px}
+.thumb-ic{position:absolute;inset:0;display:grid;place-items:center;font-size:42px}
+.thumb-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.6);border:2px solid #fff;display:grid;place-items:center;color:#fff;font-size:17px;padding-left:3px;pointer-events:none}
+.zoom{font-size:14px;line-height:1}
+.lb-media{display:grid;place-items:center;min-height:120px}
+.lb-media video{max-width:min(92vw,1000px);max-height:66vh;border-radius:10px;background:#000}
 </style>
 </head>
 <body>
@@ -781,6 +806,10 @@ const MEMBER_INFO = {
 const OLD_MEMBER_DESC = new Set(["Direto do sertão cearense. Em 2024 foi eleito o melhor player de Free Fire e fez parte do squad campeão; em 2025 entrou na lineup de LOL.", "O Presida, também conhecido como Gayriok. Figura carimbada nos squads de Free Fire e, em 2025, conseguiu ser o mais trabalhador e o mais tóxico em call no mesmo ano.", "Membro do ano e campeão da edição de 2025. Orgulho nordestino com um currículo que mistura glória e uma coleção respeitável de prêmios de pior player.", "O melhor sudestino da LABUM, sem discussão: venceu a categoria em todas as edições, de 2022 a 2025.", "Líder do Movimento Enzola. Membro do ano em 2022 e 2023 e dono absoluto da categoria Membro mais doente, vencida quatro vezes seguidas.", "Chegou chegando e foi eleito o membro revelação de 2024.", "Capixaba e clubista assumido, eleito o mais clubista três vezes. Em 2025 ainda foi o melhor apostador e o melhor player de Clash Royale.", "O representante do Sul na LABUM. Levou Membro mais bosta em 2023 e segue tentando se redimir.", "Também conhecido como Baiano e Wizzard. Membro do ano de 2024 e o mais engraçado do grupo em três edições seguidas.", "Inteligente e cristão firme, direto do sertão cearense. Em 2024 foi o melhor player de Free Fire e fez parte do squad campeão.", "O Presida, também conhecido como Gayriok. Carioca, joga de tudo um pouco, sempre se lascou com mulheres e nutre um ódio inexplicável por atacadões.", "Nosso garoto prodígio, direto do Ceará. Não sabe o que quer da vida, acha que entende de tudo e adora uma foto com a língua de fora (terrivelmente vergonhoso). Membro do ano de 2025.", "Carioca, jogador de Valorant e, segundo a LABUM, rei da milícia. Melhor sudestino em todas as edições, de 2022 a 2025.", "Mora no interior de São Paulo, é corinthiano e domina o Free Fire: esteve no squad campeão em todas as edições. O grupo insiste que ele é gordo, mesmo não sendo.", "Completo dodói e cruzeirense. Só usa foto de personagem e acredita ser um hipopótamo. Membro do ano em 2022 e 2023 e dono da categoria Membro mais doente.", "Corinthiano, rei delas e presença garantida em qualquer festa. Chegou chegando e foi o membro revelação de 2024.", "Mineiro apaixonado por tecnologia e programação, defensor ferrenho de Messi, do Barcelona e da Argentina. Um dos melhores players da história do grupo.", "O Mvt. Mora no fim do mundo, segundo o grupo passa fome e tem o menor intelecto do país. Maior colecionador de troféus do Hall da Fama, quase todos do lado da vergonha.", "Capixaba que trabalha com tecnologia e defende Messi, Barcelona, Argentina e, acima de tudo, o Flamengo. Eleito o mais clubista três vezes.", "Gremista, jogador de Valorant e único sulista da LABUM. O grupo jura que ele é preconceituoso.", "O maior trabalhador da história, baiano de sotaque puxado e dono de histórias incríveis. Corinthiano, Membro do ano de 2024 e o mais engraçado em três edições seguidas."]);
 // patrocinadores (logos embutidas, ordem de exibição)
 const SPONSORS = [["atacadao", "Atacadão"], ["discord", "Discord"], ["fatal", "Fatal Model"], ["meli", "Mercado Livre"], ["enzola", "Movimento Enzola"], ["nike", "Nike"], ["nimo", "Nimo TV"], ["nubank", "Nubank"], ["rakuten", "Rakuten"], ["twitterw", "Bolacha Twitter"]];
+// emoji sugerido para cada categoria (confete da cerimônia)
+const DEFAULT_EMOJI = { "membro-ano": "👑", "mais-bosta": "💩", "nordestino": "🌵", "sudestino": "🏙️", "mais-doente": "🤪", "insuportavel": "🙄", "engracado": "😂", "trabalhador": "💼", "vagabundo": "🛌", "tesao": "🔥", "apostador": "🎰", "bicha": "🌈", "toxico": "☢️", "clubista": "⚽", "burro": "🫏",
+    "personalidade": "⭐", "momento": "🎬", "desaura": "📉", "melhor-msg": "💬", "pior-msg": "🤮", "pior-pe": "🦶", "evento": "🎉", "apelido-mica": "🏷️", "pior-palavra": "🤐",
+    "melhor-jogo": "🎮", "pior-jogo": "🗑️", "squad-ff": "🔫", "lineup-lol": "⚔️", "melhor-ff": "🎯", "pior-ff": "💀", "melhor-lol": "🧙", "pior-lol": "🤡", "melhor-cr": "🏰", "pior-cr": "😭", "indicaria": "👍" };
 function defaultConfig() {
   const mem = list => list.map(x => typeof x === "string" ? { l: x, ref: x } : { ...x, ref: x.ref || x.l });
   const imgs = (prefix, labels) => labels.map((l, i) => ({ l, img: `form:${prefix}-${i + 1}` }));
@@ -791,9 +820,7 @@ function defaultConfig() {
   const JOGOS = ["Clash Royale", "Free Fire", "Jogos do Discord", "LOL", "OSM", "Roblox"].map(l => ({ l }));
   const plain = list => list.map(l => ({ l }));
   const fotoKey = { "Agrião": "Agriao" };
-  const EMOJI = { "membro-ano": "👑", "mais-bosta": "💩", "nordestino": "🌵", "sudestino": "🏙️", "mais-doente": "🤪", "insuportavel": "🙄", "engracado": "😂", "trabalhador": "💼", "vagabundo": "🛌", "tesao": "🔥", "apostador": "🎰", "bicha": "🌈", "toxico": "☢️", "clubista": "⚽", "burro": "🫏",
-    "personalidade": "⭐", "momento": "🎬", "desaura": "📉", "melhor-msg": "💬", "pior-msg": "🤮", "pior-pe": "🦶", "evento": "🎉", "apelido-mica": "🏷️", "pior-palavra": "🤐",
-    "melhor-jogo": "🎮", "pior-jogo": "🗑️", "squad-ff": "🔫", "lineup-lol": "⚔️", "melhor-ff": "🎯", "pior-ff": "💀", "melhor-lol": "🧙", "pior-lol": "🤡", "melhor-cr": "🏰", "pior-cr": "😭", "indicaria": "👍" };
+  const EMOJI = DEFAULT_EMOJI;
   const cfg = {
     v: 1,
     ano: 2026,
@@ -991,6 +1018,7 @@ function applyConfig(cfg) {
     s.perguntas = s.perguntas || [];
     s.perguntas.forEach(q => {
       q.tipo = q.tipo || "single"; q.num = ++n; q.sec = s.id;
+      if (!q.emoji && typeof DEFAULT_EMOJI !== "undefined" && DEFAULT_EMOJI[q.id]) q.emoji = DEFAULT_EMOJI[q.id];
       if (q.tipo === "single" || q.tipo === "pick") q.o = (q.o || []).map(x => typeof x === "string" ? { l: x } : x);
       if (q.tipo === "pick") q.n = Math.max(1, Math.min(+q.n || 1, q.o.length || 1));
       if (q.premio != null && q.premio !== "") q.premio = +q.premio; else delete q.premio;
@@ -1147,6 +1175,7 @@ function route() {
   const h = location.hash.replace("#", "");
   stopStage(); stopPoll(); closeLightbox();
   if (h !== view) window.scrollTo(0, 0);
+  document.body.classList.toggle("ceremony", h === "cerimonia");
   view = h;
   if (h === "votar") return renderVote();
   if (h === "admin") return renderAdmin();
@@ -1282,7 +1311,7 @@ function renderQuestion(q) {
   if (q.opcional) chips.push(`<span class="chip grey">Opcional</span>`);
   let inner = "";
   if (hasOpts(q)) {
-    const pics = q.o.some(o => o.img);
+    const pics = q.o.some(o => o.img || o.vid);
     const members = !pics && q.o.length && q.o.every(o => optRef(o));
     const long = !pics && q.o.some(o => o.l.length > 26);
     const sel = q.tipo === "pick" ? (Array.isArray(v) ? v : []) : [v];
@@ -1295,9 +1324,9 @@ function renderQuestion(q) {
         const on = sel.includes(o.l);
         const ref = optRef(o);
         const body = `${!o.img && ref ? avatar(ref) : ""}<span class="lbl">${esc(o.l)}${o.tag ? `<span class="tag">${esc(o.tag)}</span>` : ""}</span><span class="check">${ICON.check}</span>`;
-        if (o.img) return `<div class="opt-wrap">
-            <button type="button" class="opt pic" role="${role}" aria-checked="${on}" data-q="${q.id}" data-v="${esc(o.l)}" ${full && !on ? "disabled" : ""}><span class="thumb"><img src="${esc(imgSrc(o.img))}" alt="" loading="lazy"></span>${body}</button>
-            <button type="button" class="zoom" data-zoom="${q.id}" data-i="${i}" aria-label="Ampliar foto: ${esc(o.l)}">${ICON.zoom}</button></div>`;
+        if (o.img || o.vid) return `<div class="opt-wrap">
+            <button type="button" class="opt pic" role="${role}" aria-checked="${on}" data-q="${q.id}" data-v="${esc(o.l)}" ${full && !on ? "disabled" : ""}><span class="thumb">${o.img ? `<img src="${esc(imgSrc(o.img))}" alt="" loading="lazy">` : `<span class="thumb-ic">${o.vtipo === "audio" ? "🎧" : "🎬"}</span>`}${o.vid ? `<span class="thumb-play" aria-hidden="true">${o.vtipo === "audio" ? "♪" : "▶"}</span>` : ""}</span>${body}</button>
+            <button type="button" class="zoom" data-zoom="${q.id}" data-i="${i}" aria-label="${o.vid ? (o.vtipo === "audio" ? "Ouvir" : "Assistir") : "Ampliar foto"}: ${esc(o.l)}">${o.vid ? (o.vtipo === "audio" ? "♪" : "▶") : ICON.zoom}</button></div>`;
         return `<button type="button" class="opt ${ref ? "member" : ""}" role="${role}" aria-checked="${on}" data-q="${q.id}" data-v="${esc(o.l)}" ${full && !on ? "disabled" : ""}>${body}</button>`;
       }).join("") + `</div>`;
   } else if (q.tipo === "scale") {
@@ -1474,9 +1503,24 @@ function renderDone(sent, saved) {
    LIGHTBOX de fotos
    ===================================================================== */
 let LB = null;
+// vídeo/áudio do repositório liberado como opção: baixa em partes e monta no aparelho
+const MEDIA_CACHE = new Map();
+function loadPubMedia(ref) {
+  if (MEDIA_CACHE.has(ref)) return MEDIA_CACHE.get(ref);
+  const [ano, id] = String(ref).split(":");
+  const p = (async () => {
+    const get = async i => { const r = await fetch(`${API.base}?a=pubmedia&ano=${encodeURIComponent(ano)}&id=${encodeURIComponent(id)}&i=${i}`); const j = await r.json(); if (!r.ok || !j.data) throw new Error("midia"); return j; };
+    const first = await get(0); const parts = [first.data];
+    for (let i = 1; i < first.chunks; i++) parts.push((await get(i)).data);
+    const bytes = parts.map(b => { const bin = atob(b); const u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return u; });
+    return URL.createObjectURL(new Blob(bytes, { type: first.mime || "video/mp4" }));
+  })();
+  p.catch(() => MEDIA_CACHE.delete(ref));
+  MEDIA_CACHE.set(ref, p); return p;
+}
 function openLightbox(q, i) {
   closeLightbox();
-  const items = q.o.map((o, idx) => ({ ...o, idx })).filter(o => o.img);
+  const items = q.o.map((o, idx) => ({ ...o, idx })).filter(o => o.img || o.vid);
   let pos = Math.max(0, items.findIndex(o => o.idx === i));
   const el = document.createElement("div");
   el.className = "lb"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", q.t);
@@ -1487,12 +1531,13 @@ function openLightbox(q, i) {
     const canVote = view === "votar" && q.tipo === "single";
     el.innerHTML = `<button class="btn sm x" data-x aria-label="Fechar">Fechar ✕</button>
       ${items.length > 1 ? `<button class="btn nav prev" data-p aria-label="Foto anterior">‹</button><button class="btn nav next" data-n aria-label="Próxima foto">›</button>` : ""}
-      <img alt="${esc(o.l)}" src="${esc(imgSrc(o.img))}">
+      ${o.vid ? `<div class="lb-media"><p class="muted">Carregando ${o.vtipo === "audio" ? "áudio" : "vídeo"}…</p></div>` : `<img alt="${esc(o.l)}" src="${esc(imgSrc(o.img))}">`}
       <div class="cap">${esc(o.l)}<div class="muted" style="font-size:13px;margin-top:4px">${pos + 1} de ${items.length} · ${esc(q.t)}</div></div>
       ${canVote ? `<div class="row"><button class="btn ${chosen ? "" : "pink"}" data-vote>${chosen ? "Seu voto" : "Votar nesta"}</button></div>` : ""}`;
+    if (o.vid) loadPubMedia(o.vid).then(url => { const box = $(".lb-media", el); if (!box || items[pos] !== o) return; box.innerHTML = o.vtipo === "audio" ? `<div class="rp-audbox"><span class="rp-ic">🎧</span><audio src="${url}" controls autoplay></audio></div>` : `<video src="${url}" controls autoplay playsinline></video>`; }).catch(() => { const box = $(".lb-media", el); if (box) box.innerHTML = `<p class="muted">Não consegui carregar a mídia.</p>`; });
     const img = $("img", el);
     const fit = () => { const nw = img.naturalWidth || 300, nh = img.naturalHeight || 300; const s = Math.min(innerWidth * .9 / nw, innerHeight * .66 / nh, 3.2); img.style.width = Math.round(nw * s) + "px"; img.style.height = Math.round(nh * s) + "px"; };
-    img.complete ? fit() : img.addEventListener("load", fit);
+    if (img && !o.vid) img.complete ? fit() : img.addEventListener("load", fit);
     $("[data-x]", el).addEventListener("click", closeLightbox);
     $("[data-p]", el)?.addEventListener("click", () => { pos = (pos - 1 + items.length) % items.length; draw(); });
     $("[data-n]", el)?.addEventListener("click", () => { pos = (pos + 1) % items.length; draw(); });
@@ -1684,6 +1729,33 @@ function ranking(R) {
   });
   return [...P.values()].filter(p => p.votos > 0).sort((a, b) => b.premios - a.premios || b.grana - a.grana || b.votos - a.votos || a.nome.localeCompare(b.nome, "pt"));
 }
+/* ---- Pix: quanto pagar para cada membro (todas as categorias com dinheiro + premiação geral) ---- */
+const moneyIn = t => { const m = /R\$\s*([\d.]*\d(?:,\d+)?)/.exec(String(t || "")); return m ? parseFloat(m[1].replace(/\./g, "").replace(",", ".")) || 0 : 0; };
+// primeiro membro citado num texto (ex.: "Ueslei falando que…" → Ueslei)
+function firstMember(text) {
+  const t = " " + norm(text).replace(/[^a-z0-9]+/g, " ") + " "; let best = null, at = Infinity;
+  MEMBROS.forEach(m => (RP_ALIAS[m] || [norm(m).replace(/[^a-z0-9]+/g, " ")]).forEach(a => { const i = t.indexOf(" " + a + " "); if (i >= 0 && i < at) { at = i; best = m; } }));
+  return best;
+}
+function payouts(R, rk) {
+  const P = new Map(); const semDono = [];
+  const add = (m, t, v) => { if (!v) return; if (!P.has(m)) P.set(m, { nome: m, itens: [], cats: 0, geral: 0 }); const p = P.get(m); p.itens.push({ t, v }); p.cats += v; };
+  PERGUNTAS.filter(q => hasOpts(q) && q !== yesNoQ()).forEach(q => {
+    const r = R[q.id]; if (!r || !r.winners.length) return;
+    const valor = q.premio || 0;
+    if (valor) {
+      const share = q.tipo === "pick" ? valor : valor / r.winners.length;
+      r.winners.forEach(w => { const m = optRef(w.o) || (MEMB.has(w.l) ? w.l : firstMember(w.l)); if (m) add(m, q.t, share); else semDono.push(`${q.t}: ${w.l} (${brl(share)})`); });
+    } else if (q.premioTxt) {
+      // prêmio fixo escrito no texto, como "R$ 0,10 para Biel"
+      const v = moneyIn(q.premioTxt), para = /para\s+(.+)$/i.exec(q.premioTxt); const m = para && firstMember(para[1]);
+      if (v && m) add(m, q.t, v);
+    }
+  });
+  CFG.premiacaoGeral.forEach((g, i) => { const p = rk[i]; const v = moneyIn(g.dinheiro); if (p && v) { add(p.nome, `Premiação geral (${g.pos})`, v); const x = P.get(p.nome); x.cats -= v; x.geral += v; } });
+  const list = [...P.values()].map(p => ({ ...p, total: Math.round((p.cats + p.geral) * 100) / 100 })).filter(p => p.total >= 0.01).sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, "pt"));
+  return { list, semDono, total: list.reduce((s, p) => s + p.total, 0) };
+}
 // explica desempates no topo do ranking geral
 function rankTieNote(rk) {
   const notes = [];
@@ -1790,7 +1862,16 @@ function refreshAdmin() {
       ${notes.length ? `<div class="note-strip" style="margin:0 0 12px">${notes.map(esc).join("<br>")}</div>` : ""}
       <div class="panel tbl-scroll"><table class="rank"><thead><tr><th>#</th><th>Membro</th><th class="num">Prêmios</th><th class="num">Grana</th><th class="num">Votos</th><th>Categorias vencidas</th></tr></thead>
       <tbody>${rk.map((p, i) => `<tr class="${i < 3 ? "top" : ""}"><td class="num">${i + 1}º</td><td><span class="rk-name">${avatar(p.nome, "vav")}<b>${esc(p.nome)}</b></span></td><td class="num">${p.premios}</td><td class="num">${brl(p.grana)}</td><td class="num">${p.votos}</td><td class="muted">${p.cats.map(esc).join(", ") || "—"}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">Sem votos ainda.</td></tr>`}</tbody></table></div>
-      ${rk.length ? `<div class="panel"><h3>Premiação geral</h3>${CFG.premiacaoGeral.map((p, i) => `<p><b>${esc(p.pos)} ${rk[i] ? esc(rk[i].nome) : "—"}</b>: ${esc(p.dinheiro)}${(p.itens || []).length ? " + " + p.itens.map(esc).join(" + ") : ""}</p>`).join("")}</div>` : ""}`;
+      ${rk.length ? `<div class="panel"><h3>Premiação geral</h3>${CFG.premiacaoGeral.map((p, i) => `<p><b>${esc(p.pos)} ${rk[i] ? esc(rk[i].nome) : "—"}</b>: ${esc(p.dinheiro)}${(p.itens || []).length ? " + " + p.itens.map(esc).join(" + ") : ""}</p>`).join("")}</div>` : ""}
+      ${(() => { const PX = payouts(R, rk); if (!PX.list.length) return ""; A.pix = PX; return `<div class="panel pix"><div class="row" style="justify-content:space-between;align-items:center;gap:10px"><h3 style="margin:0">Pix para cada membro</h3><button class="btn sm gold" id="pix-copy">Copiar resumo</button></div>
+        <p class="muted" style="margin:6px 0 12px">Soma de todas as categorias com dinheiro (inclusive mensagens e momentos, pelo membro citado) mais a premiação geral. Valores já arredondados para o Pix.</p>
+        <div class="tbl-scroll"><table class="rank pix-tbl"><thead><tr><th>Membro</th><th class="num">Categorias</th><th class="num">Premiação geral</th><th class="num">Pix</th></tr></thead>
+        <tbody>${PX.list.map(p => `<tr><td><details data-pix="${esc(p.nome)}" ${(A.pixOpen || new Set()).has(p.nome) ? "open" : ""}><summary><span class="rk-name">${avatar(p.nome, "vav")}<b>${esc(p.nome)}</b></span></summary><ul class="pix-itens">${p.itens.map(x => `<li><span>${esc(x.t)}</span><span class="num">${brl(x.v)}</span></li>`).join("")}</ul></details></td><td class="num">${brl(p.cats)}</td><td class="num">${p.geral ? brl(p.geral) : "—"}</td><td class="num pix-v">${brl(p.total)}</td></tr>`).join("")}</tbody>
+        <tfoot><tr><td><b>Total</b></td><td></td><td></td><td class="num pix-v">${brl(PX.total)}</td></tr></tfoot></table></div>
+        ${PX.semDono.length ? `<p class="msg bad" style="margin-top:10px">Sem membro identificado (pague à parte): ${PX.semDono.map(esc).join("; ")}</p>` : ""}
+        <p class="muted" style="font-size:12.5px;margin:8px 0 0">Toque no nome para ver de onde vem cada valor.</p></div>`; })()}`;
+    $$("[data-pix]").forEach(d => d.addEventListener("toggle", () => { A.pixOpen = A.pixOpen || new Set(); d.open ? A.pixOpen.add(d.dataset.pix) : A.pixOpen.delete(d.dataset.pix); }));
+    $("#pix-copy")?.addEventListener("click", () => copy(`LABUM Awards ${CFG.ano} · Pix\n` + A.pix.list.map(p => `${p.nome}: ${brl(p.total)}`).join("\n") + `\nTotal: ${brl(A.pix.total)}`, "Resumo copiado"));
   }
 
   if (A.tab === "respostas") {
@@ -2112,12 +2193,11 @@ async function renderHall() {
   const H = await hallData();
   if (view !== "hall") return;
   const years = yrs(H), first = years[0], last = years[years.length - 1];
-  const ryears = [...years].reverse(), eds = [...H.editions].reverse(); // exibição: mais recente primeiro
   const nResp = H.editions.reduce((s, e) => s + (e.respostas || 0), 0);
   const nTro = H.trophies.reduce((s, t) => s + t.total, 0);
     const maxT = Math.max(1, ...H.trophies.map(t => t.total));
   const yearColor = y => { const i = years.indexOf(y); return `hsl(${[330, 42, 200, 280, 150, 15][i % 6]} 70% ${i % 2 ? 62 : 58}%)`; };
-  const mya = eds.map(ed => ({ ano: ed.ano, c: ed.cats.find(c => c.key === "membro-do-ano"), atual: ed.atual }));
+  const mya = H.editions.map(ed => ({ ano: ed.ano, c: ed.cats.find(c => c.key === "membro-do-ano"), atual: ed.atual }));
   const classics = (() => {
     const by = new Map();
     H.editions.forEach(ed => ed.cats.forEach(c => { if (!by.has(c.key)) by.set(c.key, { key: c.key, t: c.t, y: {} }); by.get(c.key).y[ed.ano] = c; }));
@@ -2138,10 +2218,10 @@ async function renderHall() {
     <p class="muted hall-lead">Troféus somados em todas as categorias individuais de ${first} a ${last}, pelo mesmo critério do ranking geral. Empates contam para todos os empatados. Toque num membro para ver a ficha completa.</p>
     ${rankPodium(H.trophies.map(t => ({ m: t.m, p: t.total })))}
     <div class="panel hall-board">
-      <div class="hall-legend">${ryears.map(y => `<span><i style="background:${yearColor(y)}"></i>${y}</span>`).join("")}</div>
+      <div class="hall-legend">${years.map(y => `<span><i style="background:${yearColor(y)}"></i>${y}</span>`).join("")}</div>
       ${H.trophies.map((t, i) => `<button class="hb-row" data-ficha="${esc(t.m)}">
         <span class="hb-pos num">${i + 1}º</span>${hallFace(t.m, "vav")}<span class="hb-name">${esc(t.m)}</span>
-        <span class="hb-bar" aria-hidden="true">${ryears.map(y => t.anos[y] ? `<i style="width:${t.anos[y] / maxT * 100}%;background:${yearColor(y)}" title="${y}: ${t.anos[y]}"></i>` : "").join("")}</span>
+        <span class="hb-bar" aria-hidden="true">${years.map(y => t.anos[y] ? `<i style="width:${t.anos[y] / maxT * 100}%;background:${yearColor(y)}" title="${y}: ${t.anos[y]}"></i>` : "").join("")}</span>
         <span class="hb-total num">${t.total}</span>
         <span class="hb-gs" title="Glória × vergonha"><span class="g">▲ ${t.glory}</span><span class="s">▼ ${t.shame}</span></span>
       </button>`).join("")}
@@ -2154,11 +2234,11 @@ async function renderHall() {
 
     <div class="section-title"><h2>Campeões de cada edição</h2><span class="line"></span></div>
     <p class="muted hall-lead">Quem levou mais troféus individuais em cada ano.</p>
-    <div class="hall-mya">${eds.map(ed => { const r = ed.ranking || []; const best = r.length ? [r[0]] : []; return `<div class="mya"><div class="mya-y">${ed.ano}</div>${best.length ? `<div class="mya-faces">${best.map(b => hallFace(b.m, "myf")).join("")}</div><b>${best.map(b => esc(b.m)).join(" & ")}</b><span class="muted">${best[0].p} troféus${best.length > 1 ? " · empate" : ""}</span>` : `<span class="muted">—</span>`}</div>`; }).join("")}</div>
+    <div class="hall-mya">${H.editions.map(ed => { const r = ed.ranking || []; const best = r.length ? [r[0]] : []; return `<div class="mya"><div class="mya-y">${ed.ano}</div>${best.length ? `<div class="mya-faces">${best.map(b => hallFace(b.m, "myf")).join("")}</div><b>${best.map(b => esc(b.m)).join(" & ")}</b><span class="muted">${best[0].p} troféus${best.length > 1 ? " · empate" : ""}</span>` : `<span class="muted">—</span>`}</div>`; }).join("")}</div>
 
     ${H.dynasties.length ? `<div class="section-title"><h2>Dinastias</h2><span class="line"></span></div>
     <p class="muted hall-lead">A mesma categoria vencida pelo mesmo membro mais de uma vez.</p>
-    <div class="hall-dyn">${H.dynasties.slice(0, 12).map(d => `<div class="dyn">${hallFace(d.m, "vav dyn-f")}<div><b>${esc(d.m)}</b> <span class="dyn-x num">${d.anos.length}×</span><div class="dyn-t">${esc(d.t)}</div><div class="muted dyn-y">${[...d.anos].reverse().join(" · ")}${seq(d.anos) === d.anos.length && d.anos.length >= 3 ? " · seguidas" : ""}</div></div></div>`).join("")}</div>` : ""}
+    <div class="hall-dyn">${H.dynasties.slice(0, 12).map(d => `<div class="dyn">${hallFace(d.m, "vav dyn-f")}<div><b>${esc(d.m)}</b> <span class="dyn-x num">${d.anos.length}×</span><div class="dyn-t">${esc(d.t)}</div><div class="muted dyn-y">${d.anos.join(" · ")}${seq(d.anos) === d.anos.length && d.anos.length >= 3 ? " · seguidas" : ""}</div></div></div>`).join("")}</div>` : ""}
 
     ${H.records.length ? `<div class="section-title"><h2>Quase unanimidade</h2><span class="line"></span></div>
     <p class="muted hall-lead">As vitórias mais esmagadoras (75% dos votos ou mais).</p>
@@ -2166,15 +2246,15 @@ async function renderHall() {
 
     <div class="section-title"><h2>Categorias clássicas</h2><span class="line"></span></div>
     <p class="muted hall-lead">As categorias que apareceram em pelo menos três edições, ano a ano.</p>
-    <div class="panel tbl-scroll"><table class="hall-tbl"><thead><tr><th>Categoria</th>${ryears.map(y => `<th>${y}</th>`).join("")}</tr></thead>
-      <tbody>${classics.map(c => `<tr><th scope="row">${esc(c.t)}</th>${ryears.map(y => { const x = c.y[y]; if (!x) return `<td class="muted">—</td>`; const w = x.winners; return `<td><div class="cell">${w.slice(0, x.team ? 5 : 2).map(v => v.m ? hallFace(v.m, "cf2") : "").join("")}<span>${w.map(v => esc(v.l)).join(x.team ? ", " : " & ")}</span></div></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
+    <div class="panel tbl-scroll"><table class="hall-tbl"><thead><tr><th>Categoria</th>${years.map(y => `<th>${y}</th>`).join("")}</tr></thead>
+      <tbody>${classics.map(c => `<tr><th scope="row">${esc(c.t)}</th>${years.map(y => { const x = c.y[y]; if (!x) return `<td class="muted">—</td>`; const w = x.winners; return `<td><div class="cell">${w.slice(0, x.team ? 5 : 2).map(v => v.m ? hallFace(v.m, "cf2") : "").join("")}<span>${w.map(v => esc(v.l)).join(x.team ? ", " : " & ")}</span></div></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
 
     <div class="section-title"><h2>Todas as edições</h2><span class="line"></span></div>
-    <div class="ed-tabs" role="tablist">${ryears.map(y => `<button class="chipbtn ${y === HALL_STATE.year ? "on" : ""}" data-year="${y}" role="tab" aria-selected="${y === HALL_STATE.year}">${y}</button>`).join("")}</div>
+    <div class="ed-tabs" role="tablist">${years.map(y => `<button class="chipbtn ${y === HALL_STATE.year ? "on" : ""}" data-year="${y}" role="tab" aria-selected="${y === HALL_STATE.year}">${y}</button>`).join("")}</div>
     <div id="hall-year"></div>
 
     ${H.editions.some(e => e.nota != null) ? `<div class="section-title"><h2>A LABUM vista pelos membros</h2><span class="line"></span></div>
-    <div class="panel hall-eval">${eds.map(ed => `<div class="he"><span class="he-y">${ed.ano}</span>
+    <div class="panel hall-eval">${H.editions.map(ed => `<div class="he"><span class="he-y">${ed.ano}</span>
       <div class="he-bars"><div class="he-row"><span>Nota</span><span class="track"><i style="width:${(ed.nota || 0) * 10}%"></i></span><b class="num">${ed.nota != null ? ed.nota.toFixed(1).replace(".", ",") : "–"}</b></div>
       <div class="he-row"><span>Indicariam</span><span class="track pink"><i style="width:${ed.indicaria ? pct(ed.indicaria.sim, ed.indicaria.total) : 0}%"></i></span><b class="num">${ed.indicaria ? pct(ed.indicaria.sim, ed.indicaria.total) + "%" : "–"}</b></div></div></div>`).join("")}
 </div>` : ""}
@@ -2688,6 +2768,12 @@ async function rpFetchAuth(action, query) {
   const s = LS.get(K.session); const headers = s && s.token ? { Authorization: "Bearer " + s.token } : {};
   return fetch(`${API.base}?a=${action}${query}`, { headers, cache: "no-store" });
 }
+// anos disponíveis: os que já têm conteúdo, a edição atual e o ano seguinte (para já ir guardando)
+function rpYearOptions() {
+  const nums = [...RP.years, String(CFG.ano), RP.ano].map(Number).filter(Boolean);
+  const lo = Math.min(...nums), hi = Math.max(...nums, Number(CFG.ano) + 1, new Date().getFullYear() + 1);
+  return Array.from({ length: hi - lo + 1 }, (_, i) => String(lo + i)).reverse();
+}
 async function rpLoad() {
   if (!RP.ano) RP.ano = String(CFG.ano);
   const r = await api("repolist", { auth: true, query: "&ano=" + encodeURIComponent(RP.ano) });
@@ -2715,7 +2801,7 @@ async function renderRepo(body) {
   <div class="panel rp-intro">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
       <div><h3 style="margin:0 0 4px">Repositório ${esc(RP.ano)}</h3><p class="muted" style="margin:0">Prints, vídeos, áudios e mensagens guardados para a premiação. Só a organização vê. Nada se perde quando alguém limpa as mídias do WhatsApp.</p></div>
-      ${RP.years.length > 1 ? `<label class="rp-year">Edição <select class="field sm" id="rp-year">${RP.years.map(y => `<option ${y === RP.ano ? "selected" : ""}>${esc(y)}</option>`).join("")}</select></label>` : ""}
+      <label class="rp-year">Edição <select class="field sm" id="rp-year">${rpYearOptions().map(y => `<option ${y === RP.ano ? "selected" : ""}>${esc(y)}</option>`).join("")}</select></label>
     </div>
     <div class="rp-stats"><span><b class="num">${RP.items.length}</b> conteúdos</span><span><b class="num">${RP.items.filter(i => i.status === "novo").length}</b> para avaliar</span><span><b class="num">${RP.items.filter(i => i.status === "aprovado").length}</b> aprovados</span><span><b class="num">${rpSize(used)}</b> usados</span></div>
   </div>
@@ -2768,7 +2854,7 @@ function rpCard(it, owner) {
         ${it.tipo !== "texto" && !incompleto ? `<button class="btn sm ghost" data-dl="${it.id}">Baixar</button>` : ""}
         <button class="btn sm ghost" data-recat="${it.id}">Categoria</button>
         ${it.mine || owner ? `<button class="btn sm ghost" data-edit="${it.id}">Editar</button>` : ""}
-        ${owner && (it.tipo === "imagem" || it.tipo === "texto") && !incompleto ? `<button class="btn sm gold" data-use="${it.id}">Usar no formulário</button>` : ""}
+        ${owner && it.tipo !== "arquivo" && !incompleto ? `<button class="btn sm gold" data-use="${it.id}">Usar no formulário</button>` : ""}
         ${it.mine || owner ? `<button class="btn sm ghost" data-del="${it.id}">Excluir</button>` : ""}
       </div>
       <div class="rp-inline" id="rp-in-${it.id}"></div>
@@ -2877,6 +2963,16 @@ async function rpUse(it, qid) {
   let label = (it.tipo === "texto" ? (it.texto || it.titulo) : (it.titulo || it.texto || "Conteúdo do repositório")).replace(/\s+/g, " ").trim().slice(0, 200);
   let n = 2; const base = label; while (q.o.some(o => o.l === label)) label = `${base} (${n++})`;
   const opt = { l: label };
+  if (it.tipo === "video" || it.tipo === "audio") {
+    if (it.thumb) {
+      const tb = await rpFetchAuth("repothumb", `&ano=${encodeURIComponent(RP.ano)}&id=${it.id}`).then(x => x.ok ? x.blob() : null).catch(() => null);
+      if (tb) { const data = await resizeImage(tb, { max: 1100 }); const up = await api("upimg", { method: "POST", auth: true, body: { data } }); if (up.ok) opt.img = "up:" + up.data.id; }
+    }
+    opt.vid = `${RP.ano}:${it.id}`; opt.vtipo = it.tipo;
+    if (!q.fotos) q.fotos = "shot";
+    const pub = await api("repoupd", { method: "POST", auth: true, body: { ano: RP.ano, id: it.id, publico: true } });
+    if (!pub.ok) { toast("Não consegui liberar a mídia."); return false; }
+  }
   if (it.tipo === "imagem") {
     const { blob } = await rpBlob(it);
     const data = await resizeImage(blob, { max: 1100 });
@@ -2994,7 +3090,7 @@ function bindRepo(body, owner) {
     const it = find(b.dataset.use), box = $("#rp-in-" + it.id);
     const qs = PERGUNTAS.filter(q => Array.isArray(q.o) && q !== yesNoQ() && q.tipo !== "pick");
     const guess = qs.find(q => q.t === it.cat);
-    box.innerHTML = `<div class="rp-form2"><span class="muted" style="font-size:13px">Vira uma opção nova da categoria escolhida${it.tipo === "imagem" ? ", com a imagem" : ""}. Dá para ajustar depois em Editar formulário.</span>
+    box.innerHTML = `<div class="rp-form2"><span class="muted" style="font-size:13px">Vira uma opção nova da categoria escolhida${it.tipo === "imagem" ? ", com a imagem" : it.tipo === "video" ? ", com o vídeo (quem vota consegue assistir)" : it.tipo === "audio" ? ", com o áudio (quem vota consegue ouvir)" : ""}. Dá para ajustar depois em Editar formulário.</span>
       <select class="field sm" data-v="q">${qs.map(q => `<option value="${esc(q.id)}" ${guess === q ? "selected" : ""}>${esc(q.t)}</option>`).join("")}</select>
       <span class="row"><button class="btn sm gold" data-ok>Adicionar ao formulário</button><button class="btn sm ghost" data-cancel>Cancelar</button></span></div>`;
     $("[data-cancel]", box).addEventListener("click", () => box.innerHTML = "");
@@ -3015,7 +3111,7 @@ function bindRepo(body, owner) {
 /* =====================================================================
    CERIMÔNIA
    ===================================================================== */
-const C = { slides: [], i: 0, phase: 0, sound: true, runners: true, bars: false, timers: [], keyH: null, order: "form", R: null, rk: null, nVotes: 0 };
+const C = { slides: [], i: 0, phase: 0, sound: true, fx: true, runners: true, bars: false, timers: [], keyH: null, order: "form", R: null, rk: null, nVotes: 0 };
 
 async function renderCeremonyGate() {
   await whenApi();
@@ -3051,6 +3147,7 @@ function renderCeremonySetup() {
           <option value="aleatoria" ${C.order === "aleatoria" ? "selected" : ""}>Aleatória (Membro do ano no fim)</option>
         </select>
         <label class="switch" style="margin-top:14px"><input type="checkbox" id="snd" ${C.sound ? "checked" : ""}> Rufar de tambores</label>
+        <label class="switch" style="margin-top:8px"><input type="checkbox" id="fxs" ${C.fx ? "checked" : ""}> Confetes, emojis e animações</label>
         <label class="switch" style="margin-top:8px"><input type="checkbox" id="run" ${C.runners ? "checked" : ""}> Mostrar 2º e 3º lugar no canto, depois do vencedor</label>
         <label class="switch" style="margin-top:8px"><input type="checkbox" id="bars" ${C.bars ? "checked" : ""}> Mostrar a contagem de votos junto com o vencedor</label>
         <p class="st-help" style="margin:14px 0 0">Avance com Espaço, Enter ou →. Volte com ←. Teclas: V votos · 2 segundo e terceiro · F tela cheia.</p>
@@ -3058,6 +3155,7 @@ function renderCeremonySetup() {
     </div></div>
     <div class="stage-bottom"><button class="btn gold lg" id="go" ${votes.length ? "" : "disabled"}>${sv ? "Começar do início" : "Começar a cerimônia"}</button></div></div>`;
   $("#ord").addEventListener("change", e => C.order = e.target.value);
+  $("#fxs").addEventListener("change", e => C.fx = e.target.checked);
   $("#snd").addEventListener("change", e => C.sound = e.target.checked);
   $("#run").addEventListener("change", e => C.runners = e.target.checked);
   $("#bars").addEventListener("change", e => C.bars = e.target.checked);
@@ -3128,7 +3226,7 @@ function stageShell(inner, btn, extra = "", cls = "") {
     <div class="stage-top"><button class="btn sm ghost" id="st-exit">← Sair</button><span class="st-help num">${C.i + 1} / ${C.slides.length}</span></div>
     <div class="stage-body" aria-live="polite"><div class="st-inner">${inner}</div></div>
     <div id="runners-slot"></div>
-    <div class="stage-bottom"><button class="btn sm ghost" id="st-back">Voltar</button>${btn ? `<button class="btn gold" id="st-next">${btn}</button>` : ""}${extra}</div></div>`;
+    <div class="stage-bottom"><button class="btn sm ghost" id="st-back">Voltar</button>${extra}${btn ? `<button class="btn gold" id="st-next">${btn}</button>` : ""}</div></div>`;
 }
 function saveProgress() { LS.set(K.cer, { slides: C.slides, i: C.i, phase: C.phase, t: Date.now() }); }
 function drawSlide() {
@@ -3171,7 +3269,7 @@ function drawSlide() {
   $("#st-bars")?.addEventListener("click", () => { C.bars = !C.bars; drawSlide(); });
   $("#st-card")?.addEventListener("click", async e => { const b = e.currentTarget; b.disabled = true; try { await downloadCard(QMAP[s.qid], C.R[s.qid]); } catch (err) { console.error(err); toast("Não consegui gerar o card."); } b.disabled = false; });
   $("#st-pub")?.addEventListener("click", async e => { e.target.disabled = true; if (await publishResults()) await copy(resultsUrl(), "Resultados publicados. Link copiado!"); e.target.disabled = false; e.target.textContent = "Atualizar resultados e copiar link"; });
-  if (s.k === "cat" && C.phase === 2 && C.runners) later(showRunners, reduced() ? 0 : 1500);
+  if (s.k === "cat" && C.phase === 2 && C.runners) later(showRunners, C.fx ? 1500 : 0);
   fitStage();
 }
 // diminui textos e imagens até tudo caber na tela, sem rolagem (títulos e mensagens longas)
@@ -3278,21 +3376,30 @@ function roll(q) {
   C.phase = 1; drawSlide();
   const btn = $("#st-next"); if (btn) { btn.disabled = true; btn.textContent = "Rufem os tambores…"; }
   const r = C.R[q.id];
-  const noms = $$(".nom");
+  const noms = $$(".nom"); const n = noms.length;
   const winIdx = r.winners.map(w => q.o.findIndex(o => o.l === w.l));
-  const dur = reduced() ? 300 : 2400;
+  // a seleção passa por todos os indicados pelo menos uma vez, depois desacelera até o vencedor
+  const dur = !C.fx ? 400 : Math.min(4600, Math.max(2600, n * 95 + 1500));
   drum(dur / 1000);
-  if (!reduced() && noms.length) {
-    let t = 0, step = 65, prev = -1;
-    while (t < dur - 300) {
-      let idx; do { idx = Math.floor(Math.random() * noms.length); } while (noms.length > 1 && idx === prev); prev = idx;
-      const at = t, ii = idx; later(() => { noms.forEach(n => n.classList.remove("hl")); noms[ii].classList.add("hl"); }, at);
-      t += step; step *= 1.08;
+  if (C.fx && n) {
+    const order = [...noms.keys()].sort(() => Math.random() - .5);
+    const first = Math.min(110, (dur * .55) / n);
+    let t = 0, step = first, prev = -1, k = 0;
+    const end = dur - 320;
+    while (t < end) {
+      let idx;
+      if (k < n) idx = order[k];
+      else { do { idx = Math.floor(Math.random() * n); } while (n > 1 && idx === prev); }
+      prev = idx; k++;
+      const at = t, ii = idx; later(() => { noms.forEach(x => x.classList.remove("hl")); noms[ii].classList.add("hl"); }, at);
+      t += step; if (k >= n) step *= 1.13;
     }
   }
-  later(() => noms.forEach((n, i) => { n.classList.toggle("hl", winIdx.includes(i)); n.classList.toggle("dim", !winIdx.includes(i)); }), dur - 250);
-  later(() => { C.phase = 2; drawSlide(); cymbal(); const em = q.emoji ? [q.emoji] : ["🏆"]; confetti(3600, { power: 1.2, emojis: em }); later(() => confetti(2600, { power: .7, emojis: em }), 650); }, dur + 400);
+  later(() => noms.forEach((x, i) => { x.classList.toggle("hl", winIdx.includes(i)); x.classList.toggle("dim", !winIdx.includes(i)); }), dur - 250);
+  later(() => { C.phase = 2; drawSlide(); cymbal(); const em = [catEmoji(q)]; confetti(3600, { power: 1.2, emojis: em }); later(() => confetti(2600, { power: .7, emojis: em }), 650); }, dur + 400);
 }
+// emoji da categoria: o definido no editor ou o sugerido para ela
+const catEmoji = q => q.emoji || DEFAULT_EMOJI[q.id] || "🏆";
 
 /* =====================================================================
    Card para post (1080 × 1350, formato de post do Instagram)
@@ -3453,7 +3560,7 @@ function cymbal(vol = 1) {
 let confRAF = null, confP = [], confEnd = 0;
 const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif';
 function confetti(ms = 2500, opts = {}) {
-  if (reduced()) return;
+  if (C.fx === false) return;
   const cv = $("#confetti"); cv.classList.remove("hidden");
   const ctx = cv.getContext("2d"); const dpr = window.devicePixelRatio || 1;
   const W = innerWidth, H = innerHeight;

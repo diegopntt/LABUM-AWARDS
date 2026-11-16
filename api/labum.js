@@ -92,6 +92,17 @@ module.exports = async (req, res) => {
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); // id novo a cada envio
       res.status(200); return res.end(Buffer.from(m[2], "base64"));
     }
+    // mídia do repositório usada como opção do formulário (só itens liberados pelo criador)
+    if (a === "pubmedia") {
+      const ano = String(req.query.ano || "").replace(/[^0-9a-z-]/gi, "").slice(0, 12);
+      const id = String(req.query.id || "").replace(/[^a-f0-9]/g, "").slice(0, 32), i = Number(req.query.i) || 0;
+      const m = ano && id && parse(await redis("HGET", RK("items:" + ano), id));
+      if (!m || !m.publico || !(i >= 0 && i < m.chunks)) return send(404, { error: "nao_existe" });
+      const data = await redis("GET", RK(`file:${id}:${i}`));
+      if (!data) return send(404, { error: "sem_arquivo" });
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.status(200).json({ ok: true, data, mime: m.mime, chunks: m.chunks });
+    }
     if (a === "results") {
       const r = parse(await redis("GET", K("results")));
       return r ? send(200, { ok: true, results: r }) : send(404, { error: "nao_publicado" });
@@ -214,6 +225,7 @@ module.exports = async (req, res) => {
         if (body.cat != null) m.cat = clip(body.cat, 80);
         if (body.nota != null) m.nota = clip(body.nota, 400);
         if (body.usadoEm != null) m.usadoEm = clip(body.usadoEm, 80);
+        if (body.publico != null) { if (s.role !== "owner") return send(403, { error: "so_criador" }); m.publico = !!body.publico; }
         if (body.titulo != null || body.texto != null || body.quem != null) {
           if (!canEdit(m)) return send(403, { error: "so_autor" });
           if (body.titulo != null) m.titulo = clip(body.titulo, 140);
