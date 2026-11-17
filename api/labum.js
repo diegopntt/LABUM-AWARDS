@@ -195,6 +195,21 @@ module.exports = async (req, res) => {
       return send(200, { role: s.role, name: s.name, ...pubSettings(st), votes: anon });
     }
 
+    // desempate pelo "voto dos neutros": recontagem sem os votos dos empatados (só devolve contagens)
+    if (a === "neutros" && req.method === "POST") {
+      const itens = Array.isArray(body.itens) ? body.itens.slice(0, 60) : [];
+      const all = await redis("HGETALL", K("votes")) || []; const votes = [];
+      for (let i = 0; i < all.length; i += 2) { const v = parse(all[i + 1]); if (v) votes.push(v); }
+      const res = {};
+      itens.forEach(it => {
+        const qid = String(it.qid || "").slice(0, 60), labels = (it.labels || []).map(String).slice(0, 20), mem = new Set((it.members || []).map(x => norm(String(x))));
+        const c = Object.fromEntries(labels.map(l => [l, 0]));
+        votes.forEach(v => { if (mem.has(norm(v.n || ""))) return; const x = v.a && v.a[qid]; if (typeof x === "string" && x in c) c[x]++; });
+        res[qid] = c;
+      });
+      return send(200, { ok: true, res });
+    }
+
     // data prevista da votação (criador e admins)
     if (a === "setdate" && req.method === "POST") {
       const d = cleanDate(body.opensAt); if (d === undefined) return send(400, { error: "data_invalida" });
