@@ -83,7 +83,10 @@ async function session(req) {
   if (s.role === "co" && !(await redis("HEXISTS", K("admins"), s.user))) return null; // admin removido
   return s;
 }
-async function settings() { return parse(await redis("GET", K("settings"))) || { closed: false }; }
+// estado da votação: started (o criador liberou o formulário), closed (encerrada), opensAt (data prevista), hidePrizes
+async function settings() { return { closed: false, started: false, opensAt: null, hidePrizes: false, ...(parse(await redis("GET", K("settings"))) || {}) }; }
+const pubSettings = st => ({ closed: !!st.closed, started: !!st.started, opensAt: st.opensAt || null, hidePrizes: !!st.hidePrizes });
+const cleanDate = v => { if (v == null || v === "") return null; const d = new Date(String(v)); return isNaN(d) ? undefined : d.toISOString(); };
 
 module.exports = async (req, res) => {
   const a = (req.query && req.query.a) || "";
@@ -98,7 +101,7 @@ module.exports = async (req, res) => {
       const [st, keys, cfg, pub] = await Promise.all([settings(), redis("HKEYS", K("votes")), redis("GET", K("config")), redis("EXISTS", K("results"))]);
       // quem já votou, como código (o site compara com os nomes dos membros para colorir as fotos)
       const voted = (keys || []).map(k => sha(EDITION + ":" + k).slice(0, 12));
-      return send(200, { ok: true, configured: true, closed: !!st.closed, ownerReady: !!(process.env.ADMIN_USER && process.env.ADMIN_PASSWORD), count: voted.length, voted, published: !!pub, config: parse(cfg) });
+      return send(200, { ok: true, configured: true, ...pubSettings(st), ownerReady: !!(process.env.ADMIN_USER && process.env.ADMIN_PASSWORD), count: voted.length, voted, published: !!pub, config: parse(cfg) });
     }
     if (a === "img") {
       const id = String(req.query.id || "").replace(/[^a-z0-9]/g, "").slice(0, 40);
@@ -131,7 +134,9 @@ module.exports = async (req, res) => {
       return r ? send(200, { ok: true, results: r }) : send(404, { error: "nao_publicado" });
     }
     if (a === "vote" && req.method === "POST") {
-      if ((await settings()).closed) return send(403, { error: "encerrada" });
+      const stv = await settings();
+      if (stv.closed) return send(403, { error: "encerrada" });
+      if (!stv.started) return send(403, { error: "nao_iniciada" });
       if (JSON.stringify(body).length > 60000) return send(413, { error: "grande_demais" });
       const devTok = String(body.device || "");
       if (devTok.length < 20) return send(400, { error: "aparelho_invalido" });
@@ -184,10 +189,18 @@ module.exports = async (req, res) => {
       if (s.role === "owner") {
         const adm = await redis("HGETALL", K("admins")); const admins = [];
         for (let i = 0; i < (adm || []).length; i += 2) { const x = parse(adm[i + 1]); if (x) admins.push({ user: adm[i], name: x.name, t: x.t }); }
-        return send(200, { role: s.role, name: s.name, closed: !!st.closed, admins, votes: votes.map(({ dev, ...v }) => v) });
+        return send(200, { role: s.role, name: s.name, ...pubSettings(st), admins, votes: votes.map(({ dev, ...v }) => v) });
       }
       const anon = votes.map(v => [sha(EDITION + v.key), v.a]).sort((x, y) => x[0] < y[0] ? -1 : 1).map(x => ({ a: x[1] }));
-      return send(200, { role: s.role, name: s.name, closed: !!st.closed, votes: anon });
+      return send(200, { role: s.role, name: s.name, ...pubSettings(st), votes: anon });
+    }
+
+    // data prevista da votação (criador e admins)
+    if (a === "setdate" && req.method === "POST") {
+      const d = cleanDate(body.opensAt); if (d === undefined) return send(400, { error: "data_invalida" });
+      const st = await settings(); st.opensAt = d;
+      await redis("SET", K("settings"), JSON.stringify(st));
+      return send(200, { ok: true, ...pubSettings(st) });
     }
 
     // ---------- repositório (criador e admins) ----------
@@ -304,7 +317,15 @@ module.exports = async (req, res) => {
       await redis("DEL", K("votes")); await redis("DEL", K("results"));
       return send(200, { ok: true });
     }
-    if (a === "settings" && req.method === "POST") { await redis("SET", K("settings"), JSON.stringify({ closed: !!body.closed })); return send(200, { ok: true, closed: !!body.closed }); }
+    if (a === "settings" && req.method === "POST") {
+      const st = await settings();
+      if (body.closed != null) st.closed = !!body.closed;
+      if (body.started != null) { st.started = !!body.started; if (st.started) st.closed = false; }
+      if (body.hidePrizes != null) st.hidePrizes = !!body.hidePrizes;
+      if (body.opensAt !== undefined) { const d = cleanDate(body.opensAt); if (d === undefined) return send(400, { error: "data_invalida" }); st.opensAt = d; }
+      await redis("SET", K("settings"), JSON.stringify(st));
+      return send(200, { ok: true, ...pubSettings(st) });
+    }
     if (a === "saveconfig" && req.method === "POST") {
       if (body.reset) { await redis("DEL", K("config")); return send(200, { ok: true, reset: true }); }
       const c = body.config;

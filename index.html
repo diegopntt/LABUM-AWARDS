@@ -812,6 +812,42 @@ button.ffp:hover .ffig{transform:translateY(-4px)}
 .rp-pager .pg-n{font-weight:700;font-size:13.5px;min-width:96px;text-align:center}
 .rp-pager .btn[data-pg]{min-width:40px;font-size:18px;line-height:1}
 .rp-pager select{width:auto}
+
+/* ===== v5: contagem regressiva, trava e quadro da votação ===== */
+.countdown{display:flex;flex-direction:column;align-items:center;gap:10px;margin:22px auto 6px;padding:18px 18px 16px;border:1px solid rgba(232,185,76,.35);border-radius:18px;background:linear-gradient(180deg,rgba(232,185,76,.07),rgba(255,61,154,.04));max-width:520px}
+.cd-k{font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.cd-row{display:flex;align-items:flex-start;gap:6px}
+.cd-row > i{font-style:normal;font-family:var(--display);font-size:clamp(26px,6vw,40px);color:rgba(255,255,255,.35);line-height:1;align-self:flex-start;margin-top:clamp(12px,3.2vw,20px)}
+.cd-b{display:flex;flex-direction:column;align-items:center;min-width:clamp(58px,15vw,84px)}
+.cd-b b{font-family:var(--display);font-weight:400;font-size:clamp(38px,10vw,64px);line-height:1;color:var(--text);background:#141016;border:1px solid var(--line);border-radius:12px;padding:8px 10px 6px;min-width:100%;text-align:center;font-variant-numeric:tabular-nums}
+.cd-b span{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:6px}
+.cd-date{font-size:13.5px;color:var(--muted);font-weight:600}
+.cd-done{margin:0;text-align:center;font-weight:600;max-width:40ch}
+.hero.locked .countdown{margin-top:26px}
+.preview-banner{display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;padding:12px 14px;border-radius:12px;border:1px dashed rgba(232,185,76,.6);background:rgba(232,185,76,.07);font-size:14px;line-height:1.45}
+.preview-banner svg{flex:none;margin-top:2px}
+.vote-panel{border-color:rgba(232,185,76,.35)}
+.state-chip{font-size:12.5px;font-weight:800;padding:5px 11px;border-radius:999px;border:1px solid var(--line)}
+.state-chip.st-aguardando{color:var(--gold);border-color:rgba(232,185,76,.5);background:rgba(232,185,76,.08)}
+.state-chip.st-aberta{color:#7ee2a8;border-color:rgba(110,220,160,.5);background:rgba(110,220,160,.08)}
+.state-chip.st-encerrada{color:#ff8fb8;border-color:rgba(255,61,154,.5);background:rgba(255,61,154,.08)}
+.vp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}
+@media (max-width:720px){.vp-grid{grid-template-columns:1fr}}
+.vp-grid input[type=datetime-local]{width:auto;min-width:0;flex:1;color-scheme:dark}
+.cobra{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:grid;gap:10px}
+.cobra textarea{resize:vertical;font-size:14px;line-height:1.45}
+.cobra-faces{display:flex}
+.cobra-faces .vav{width:24px;height:24px;border-radius:50%;margin-left:-6px;box-shadow:0 0 0 2px var(--panel);object-fit:cover}
+/* cartinha */
+.mcard-prev{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:94vw}
+.mcard-prev img{width:auto;height:min(76vh,700px);max-width:92vw;object-fit:contain;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.mcards-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.mcards-row{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:420px){.mcards-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.mc-mini{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--text);font:inherit;cursor:pointer;transition:border-color .2s,transform .15s}
+.mc-mini:hover{border-color:rgba(232,185,76,.5);transform:translateY(-2px)}
+.mc-mini .mc-f{width:56px;height:56px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--gold);display:grid;place-items:center;font-weight:800;color:#140f15}
+.mc-mini b{font-size:13.5px}
 </style>
 </head>
 <body>
@@ -976,7 +1012,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const brl = v => "R$ " + (Math.round(v * 100) / 100).toFixed(2).replace(".", ",");
-const prizeText = q => q.premioTxt || (q.premio != null && q.premio !== "" ? brl(+q.premio) : "");
+const prizeText = q => (typeof API !== "undefined" && API.hidePrizes) ? "" : q.premioTxt || (q.premio != null && q.premio !== "" ? brl(+q.premio) : "");
 const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 const reduced = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
@@ -1159,7 +1195,48 @@ function decodeCodes(text) {
 /* =====================================================================
    Servidor (Vercel /api/labum). Sem servidor, o site cai no modo código.
    ===================================================================== */
-const API = { on: false, checked: false, closed: false, ownerReady: false, count: null, published: false, votedCodes: null, votedMembers: new Set(), base: "/api/labum", listeners: [] };
+const API = { on: false, checked: false, closed: false, started: false, opensAt: null, hidePrizes: false, ownerReady: false, count: null, published: false, votedCodes: null, votedMembers: new Set(), base: "/api/labum", listeners: [] };
+// estado da votação vindo do servidor
+function applyVoteState(d) {
+  if (!d) return;
+  if (typeof d.closed === "boolean") API.closed = d.closed;
+  if (typeof d.started === "boolean") API.started = d.started;
+  if ("opensAt" in d) API.opensAt = d.opensAt || null;
+  if (typeof d.hidePrizes === "boolean") API.hidePrizes = d.hidePrizes;
+}
+// data prevista da votação deste ano (vale até a organização salvar outra no painel)
+const VOTE_DATE_DEFAULT = "2026-12-19T00:00:00-03:00";
+const voteState = () => !API.on ? "aberta" : API.closed ? "encerrada" : API.started ? "aberta" : "aguardando";
+const opensAt = () => new Date(API.opensAt || VOTE_DATE_DEFAULT);
+const isOwnerSession = () => { const s = LS.get(K.session); return !!(s && s.role === "owner" && s.token); };
+// contagem regressiva: dias, horas, minutos e segundos até a data
+function cdParts(to) { let s = Math.max(0, Math.floor((to - Date.now()) / 1000)); const d = Math.floor(s / 86400); s -= d * 86400; const h = Math.floor(s / 3600); s -= h * 3600; const m = Math.floor(s / 60); return { d, h, m, s: s - m * 60, done: to - Date.now() <= 0 }; }
+// "Sábado, 19 de dezembro, às 20h00" (sempre no horário de Brasília)
+const fmtOpens = d => {
+  const o = k => new Intl.DateTimeFormat("pt-BR", { [k]: k === "weekday" || k === "month" ? "long" : "2-digit", timeZone: "America/Sao_Paulo" }).format(d);
+  const day = new Intl.DateTimeFormat("pt-BR", { day: "numeric", timeZone: "America/Sao_Paulo" }).format(d);
+  const hm = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "America/Sao_Paulo" }).format(d).replace(":", "h");
+  const wd = o("weekday"); return `${wd.charAt(0).toUpperCase() + wd.slice(1)}, ${day} de ${o("month")}, às ${hm}`;
+};
+let CD_TIMER = null;
+function countdownHTML() {
+  const to = opensAt(), p = cdParts(to);
+  const box = (v, l, k) => `<div class="cd-b"><b class="num" data-cd="${k}">${String(v).padStart(2, "0")}</b><span>${l}</span></div>`;
+  return `<div class="countdown" role="timer" aria-live="off">
+    <span class="cd-k">${p.done ? "Chegou o dia" : "A votação abre em"}</span>
+    ${p.done ? `<p class="cd-done">A votação abre assim que a organização liberar o formulário. Fica de olho no grupo!</p>`
+      : `<div class="cd-row">${box(p.d, p.d === 1 ? "dia" : "dias", "d")}<i>:</i>${box(p.h, "horas", "h")}<i>:</i>${box(p.m, "min", "m")}<i>:</i>${box(p.s, "seg", "s")}</div>`}
+    <span class="cd-date">${esc(fmtOpens(to))}</span></div>`;
+}
+function startCountdown(onDone) {
+  clearInterval(CD_TIMER);
+  CD_TIMER = setInterval(() => {
+    const els = $$("[data-cd]"); if (!els.length) { clearInterval(CD_TIMER); return; }
+    const p = cdParts(opensAt());
+    if (p.done) { clearInterval(CD_TIMER); onDone && onDone(); return; }
+    els.forEach(e => { e.textContent = String(p[e.dataset.cd]).padStart(2, "0"); });
+  }, 1000);
+}
 const notify = () => [...API.listeners].forEach(f => { try { f(); } catch (e) { console.error(e); } });
 async function api(action, { method = "GET", body, auth = false, query = "" } = {}) {
   const headers = {};
@@ -1177,7 +1254,7 @@ async function api(action, { method = "GET", body, auth = false, query = "" } = 
 async function refreshStatus() {
   const r = await api("status");
   if (!(r.ok && r.data && r.data.configured)) return false;
-  API.on = true; API.closed = !!r.data.closed; API.ownerReady = !!r.data.ownerReady; API.count = r.data.count; API.published = !!r.data.published;
+  API.on = true; applyVoteState(r.data); API.ownerReady = !!r.data.ownerReady; API.count = r.data.count; API.published = !!r.data.published;
   API.votedCodes = new Set(Array.isArray(r.data.voted) ? r.data.voted : []);
   const cfg = r.data.config;
   if (cfg && Array.isArray(cfg.secoes)) { if (JSON.stringify(cfg) !== JSON.stringify(CFG)) { applyConfig(cfg); LS.set(K.cfg, cfg); } }
@@ -1276,6 +1353,7 @@ function route() {
   const h = location.hash.replace("#", "");
   stopStage(); stopPoll(); closeLightbox();
   if (h !== view) window.scrollTo(0, 0);
+  clearInterval(CD_TIMER);
   document.body.classList.toggle("ceremony", h === "cerimonia");
   view = h;
   if (h === "votar") return renderVote();
@@ -1299,7 +1377,7 @@ function topbar(extra = "", wrapStyle = "") {
    ===================================================================== */
 function renderHome() {
   const sent = LS.get(K.sent);
-  const closed = API.closed;
+  const closed = API.closed, state = voteState();
   const started = V.name || Object.keys(V.a).length;
   const nm = MEMBROS.length;
   const done = API.votedMembers || new Set();
@@ -1311,23 +1389,24 @@ function renderHome() {
       <span class="eyebrow">${ICON.starSm} Sejam bem-vindos à ${esc(CFG.edicao)} ${ICON.starSm}</span>
       <h1 class="title"><span>Labum</span><span>Awards</span></h1>
       <div class="year" aria-label="Edição ${esc(CFG.ano)}"><i></i><span>${esc(CFG.ano)}</span><i></i></div>
+      ${state === "aguardando" ? countdownHTML() : ""}
       <div class="hero-actions">
-        ${closed ? "" : `<button class="btn gold lg" id="start">${ICON.vote} ${sent ? "Alterar meu voto" : started ? "Continuar votação" : "Começar a votar"}</button>`}
+        ${state === "aberta" ? `<button class="btn gold lg" id="start">${ICON.vote} ${sent ? "Alterar meu voto" : started ? "Continuar votação" : "Começar a votar"}</button>` : ""}
         <a class="btn ghost" href="#hall">${ICON.trophy} Hall da Fama</a>
         <a class="btn ghost" href="#membros">${ICON.people} Conheça os membros</a>
         ${API.published ? `<a class="btn ghost" href="#resultados">Ver resultados</a>` : ""}
         ${canOfferInstall() ? `<button class="btn ghost" id="install">${ICON.phone} Instalar app</button>` : ""}
       </div>
-      ${voted != null ? `<div class="turnout" aria-label="${voted} de ${nm} membros já votaram"><div class="turnout-faces">${MEMBROS.map(n => `<span class="${done.has(n) ? "on" : ""}" title="${esc(n)}">${avatar(n, "tf")}</span>`).join("")}</div><b class="num">${voted} de ${nm}</b> membros já votaram</div>` : ""}
+      ${voted != null && state !== "aguardando" ? `<div class="turnout" aria-label="${voted} de ${nm} membros já votaram"><div class="turnout-faces">${MEMBROS.map(n => `<span class="${done.has(n) ? "on" : ""}" title="${esc(n)}">${avatar(n, "tf")}</span>`).join("")}</div><b class="num">${voted} de ${nm}</b> membros já votaram</div>` : ""}
       ${closed ? `<div class="closed-banner">A votação está encerrada. Agora é esperar a cerimônia.</div>` : ""}
       ${sent ? `<div class="voted-banner"><div><b>Você já votou como ${esc(sent.name)}.</b><br><span class="muted">${sent.saved ? "Seu voto está registrado." : "Se ainda não mandou, envie seu código ao organizador."}</span></div><button class="btn sm" id="showcode">${sent.saved ? "Ver detalhes" : "Ver meu código"}</button></div>` : ""}
     </section>
 
-    <div class="section-title"><h2>Premiação geral</h2><span class="line"></span></div>
+    ${API.hidePrizes ? `<div class="section-title"><h2>Premiação geral</h2><span class="line"></span></div><div class="note-strip">A premiação desta edição será anunciada em breve.</div>` : `<div class="section-title"><h2>Premiação geral</h2><span class="line"></span></div>
     <div class="podium">
       ${CFG.premiacaoGeral.map((p, i) => `<div class="place p${i + 1}"><div class="pos">${esc(p.pos)}</div><div class="cash">${esc(p.dinheiro)}</div><ul>${(p.itens || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}
     </div>
-    <div class="note-strip">Lembrando que o ranking é feito pelo número de premiações nas categorias individuais!</div>
+    <div class="note-strip">Lembrando que o ranking é feito pelo número de premiações nas categorias individuais!</div>`}
 
     <div class="section-title" id="regras"><h2>Regras</h2><span class="line"></span></div>
     <div class="rules">${CFG.regras.map(r => `<div class="rule"><div>${esc(r)}</div></div>`).join("")}</div>
@@ -1343,6 +1422,7 @@ function renderHome() {
   $("#start")?.addEventListener("click", () => { if (V.step >= STEPS.length) V.step = sent ? STEPS.length - 1 : 0; saveDraft(); go("votar"); });
   $("#showcode")?.addEventListener("click", () => go("enviado"));
   $("#install")?.addEventListener("click", installApp);
+  if (state === "aguardando") startCountdown(() => { if (view === "") renderHome(); });
 }
 
 /* =====================================================================
@@ -1378,13 +1458,26 @@ function progressBar() {
     <div class="bar-meta"><span id="meta-left" class="${ok ? "ok" : ""}">${l}</span><span id="meta-right">${r}</span></div>
   </div></div>`;
 }
+function renderLocked() {
+  app.innerHTML = `${topbar(`<a class="btn sm ghost" href="#">Início</a>`)}
+  <main class="wrap"><section class="hero locked">
+    ${logoImg("hero-logo", "Logo da LABUM")}
+    <span class="eyebrow">${ICON.starSm} ${esc(CFG.edicao)} ${ICON.starSm}</span>
+    <h1 class="title" style="font-size:clamp(44px,9vw,92px)"><span>Calma,</span><span>ainda não</span></h1>
+    <p class="muted" style="max-width:460px;margin:6px auto 0">O formulário fica fechado até a organização liberar a votação. Enquanto isso, dá para ver o Hall da Fama e conhecer os membros.</p>
+    ${countdownHTML()}
+    <div class="hero-actions"><a class="btn ghost" href="#hall">${ICON.trophy} Hall da Fama</a><a class="btn ghost" href="#membros">${ICON.people} Conheça os membros</a></div>
+  </section></main>`;
+  startCountdown(() => { if (view === "votar") renderVote(); });
+}
 function renderVote() {
   if (API.closed) { go(""); return; }
+  if (voteState() === "aguardando" && !isOwnerSession()) return renderLocked();
   if (V.name && !MEMBROS.includes(V.name)) { V.name = ""; saveDraft(); }
   if (V.step >= STEPS.length || V.step < 0) V.step = 0;
   const s = STEPS[V.step];
   const body = s.id === "id" ? renderIdStep() : s.id === "revisao" ? renderReview() : renderSection(SECOES.find(x => x.id === s.id));
-  app.innerHTML = progressBar() + `<main class="wrap">${body}</main>`;
+  app.innerHTML = progressBar() + `<main class="wrap">${voteState() === "aguardando" ? `<div class="preview-banner">${ICON.rules} <span><b>Prévia do criador.</b> A votação ainda não foi iniciada e só você consegue ver o formulário. Para liberar: Painel → Configurações → Iniciar votação.</span></div>` : ""}${body}</main>`;
   bindVote();
   const on = $(".step.on"); if (on) { const st = $(".steps"); st.scrollLeft = on.offsetLeft - st.offsetLeft - st.clientWidth / 2 + on.offsetWidth / 2; }
 }
@@ -1589,6 +1682,7 @@ async function submitVote() {
       if (r.ok) saved = true;
       else if (r.status === 409) { err.innerHTML = `Já existe um voto com o nome <b>${esc(vote.n)}</b> enviado de outro aparelho. Se foi você em outro celular, vote por lá. Se não foi, fale com o organizador para liberar o nome.`; err.classList.remove("hidden"); btn.disabled = false; btn.textContent = "Enviar meu voto"; return; }
       else if (r.status === 400 && r.data && r.data.error === "melhor_pior_igual") { err.textContent = "Você votou no mesmo membro como melhor e pior player do mesmo jogo. Ajuste antes de enviar."; err.classList.remove("hidden"); btn.disabled = false; btn.textContent = "Enviar meu voto"; return; }
+            else if (r.status === 403 && r.data && r.data.error === "nao_iniciada") { err.textContent = isOwnerSession() ? "Isto é só uma prévia: a votação ainda não foi iniciada (Painel → Configurações)." : "A votação ainda não começou."; err.classList.remove("hidden"); btn.disabled = false; btn.textContent = "Enviar meu voto"; return; }
             else if (r.status === 403) { API.closed = true; err.textContent = "A votação foi encerrada pela organização."; err.classList.remove("hidden"); btn.textContent = "Votação encerrada"; return; }
     }
     LS.set(K.sent, { name: vote.n, code, saved, t: vote.t });
@@ -1761,11 +1855,11 @@ async function loadData() {
   if (r.status === 401) { stopPoll(); route(); return false; }
   if (!r.ok) { A.err = "Não consegui atualizar agora. Tentando de novo em instantes."; return false; }
   A.err = ""; A.loaded = true;
-  const sig = JSON.stringify([(r.data.votes || []).map(v => [v.key, v.t, v.n]), (r.data.admins || []).map(x => [x.user, x.name]), r.data.closed]);
+  const sig = JSON.stringify([(r.data.votes || []).map(v => [v.key, v.t, v.n]), (r.data.admins || []).map(x => [x.user, x.name]), r.data.closed, r.data.started, r.data.opensAt, r.data.hidePrizes]);
   A.changed = A.sig !== undefined && sig !== A.sig; A.sig = sig;
   A.votes = (r.data.votes || []).map(v => ({ e: EDITION_ID, n: v.n || "", t: v.t || 0, a: v.a || {}, key: v.key, _src: v.src || "site" }));
   A.admins = r.data.admins || [];
-  if (typeof r.data.closed === "boolean") API.closed = r.data.closed;
+  applyVoteState(r.data);
   return true;
 }
 // atualização automática: só redesenha quando chegou algo novo, e espera você parar de mexer
@@ -1922,6 +2016,58 @@ function rankTieNote(rk) {
   return notes;
 }
 
+/* ---- quadro da votação: estado, data, iniciar/encerrar, ocultar prêmios e cobrança ---- */
+const STATE_TXT = { aguardando: "Aguardando início", aberta: "Aberta", encerrada: "Encerrada" };
+const toLocalInput = d => { const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+function missingMembers(owner, votes) {
+  if (owner) return MEMBROS.filter(m => !votes.some(v => !v._demo && norm(v.n) === norm(m)));
+  return MEMBROS.filter(m => !(API.votedMembers || new Set()).has(m));
+}
+const COBRA = ["Bora que a cerimônia não espera!", "Quem não votar vira indicado automático a Membro mais bosta.", "Leva 5 minutinhos, sem desculpa.", "O Hall da Fama tá de olho em vocês.", "Votar é grátis, a vergonha não."];
+function cobrancaMsg(falta) {
+  const lista = falta.length > 1 ? falta.slice(0, -1).join(", ") + " e " + falta[falta.length - 1] : falta[0];
+  return `🏆 *LABUM Awards ${CFG.ano}*\nAinda falta${falta.length > 1 ? "m" : ""} votar: *${lista}* (${MEMBROS.length - falta.length} de ${MEMBROS.length} já votaram).\n${COBRA[Math.floor(Math.random() * COBRA.length)]} 👇\n${location.origin}/#votar`;
+}
+function votePanel(owner, votes) {
+  if (!API.on) return "";
+  const st = voteState(), d = opensAt(), falta = missingMembers(owner, votes);
+  return `<div class="panel vote-panel">
+    <div class="row" style="justify-content:space-between;align-items:center;gap:10px"><h3 style="margin:0">Votação</h3><span class="state-chip st-${st}">${STATE_TXT[st]}</span></div>
+    <div class="vp-grid">
+      <div><label class="ed-l" for="vp-date">Data da votação <span class="muted">(contagem regressiva na página inicial)</span></label>
+        <div class="row" style="gap:8px"><input class="field sm" type="datetime-local" id="vp-date" value="${toLocalInput(d)}"><button class="btn sm" id="vp-save">Salvar data</button></div>
+        <p class="muted" style="font-size:12.5px;margin:6px 0 0">${st === "aguardando" ? (cdParts(d).done ? "A data já chegou: falta iniciar a votação." : `Faltam ${cdParts(d).d} dias e ${cdParts(d).h} horas.`) : "A contagem só aparece enquanto a votação não começou."}</p></div>
+      ${owner ? `<div><span class="ed-l">Controle</span><div class="row" style="gap:8px;flex-wrap:wrap">
+          ${st === "aguardando" ? `<button class="btn gold" id="vp-start">Iniciar votação</button>` : ""}
+          ${st === "aberta" ? `<button class="btn pink" id="vp-close">Encerrar votação</button><button class="btn ghost" id="vp-pause">Voltar a aguardar</button>` : ""}
+          ${st === "encerrada" ? `<button class="btn gold" id="vp-reopen">Reabrir votação</button>` : ""}
+          ${st === "aguardando" ? `<a class="btn ghost" href="#votar">Ver prévia do formulário</a>` : ""}</div>
+        <label class="switch" style="margin-top:12px"><input type="checkbox" id="vp-hide" ${API.hidePrizes ? "checked" : ""}> Ocultar premiações (valores e prêmios do pódio)</label></div>` : ""}
+    </div>
+    ${st === "aberta" && falta.length ? `<div class="cobra"><div class="row" style="justify-content:space-between;align-items:center;gap:8px"><b>Cobrar quem falta (${falta.length})</b><span class="cobra-faces">${falta.map(n => avatar(n, "vav")).join("")}</span></div>
+      <textarea class="field sm" id="cobra-txt" rows="4" aria-label="Mensagem de cobrança">${esc(cobrancaMsg(falta))}</textarea>
+      <div class="row" style="gap:8px"><a class="btn gold sm" id="cobra-wa" target="_blank" rel="noopener">Enviar no WhatsApp</a><button class="btn sm ghost" id="cobra-copy">Copiar mensagem</button><button class="btn sm ghost" id="cobra-new">Outra frase</button></div></div>` : ""}
+  </div>`;
+}
+function bindVotePanel(owner, votes) {
+  const set = async (body, msg) => {
+    const r = await api(owner ? "settings" : "setdate", { method: "POST", auth: true, body });
+    if (!r.ok) { toast(r.status === 400 ? "Data inválida." : "Não consegui salvar. Tente de novo."); return; }
+    applyVoteState(r.data); toast(msg); A.sig = undefined; refreshAdmin();
+  };
+  $("#vp-save")?.addEventListener("click", () => { const v = $("#vp-date").value; if (!v) return toast("Escolha a data."); set({ opensAt: new Date(v).toISOString() }, "Data salva. A contagem já aparece na página inicial."); });
+  const start = $("#vp-start"); if (start) armed(start, "Confirmar: abrir para todos", () => set({ started: true }, "Votação iniciada! O formulário já está aberto."));
+  const close = $("#vp-close"); if (close) armed(close, "Confirmar encerramento", () => set({ closed: true }, "Votação encerrada."));
+  $("#vp-pause")?.addEventListener("click", () => set({ started: false }, "Formulário fechado de novo. A contagem voltou para a página inicial."));
+  $("#vp-reopen")?.addEventListener("click", () => set({ closed: false, started: true }, "Votação reaberta."));
+  $("#vp-hide")?.addEventListener("change", e => set({ hidePrizes: e.target.checked }, e.target.checked ? "Premiações ocultas no site." : "Premiações visíveis de novo."));
+  const txt = $("#cobra-txt"), wa = $("#cobra-wa");
+  const syncWa = () => { if (wa && txt) wa.href = "https://wa.me/?text=" + encodeURIComponent(txt.value); };
+  syncWa(); txt?.addEventListener("input", syncWa);
+  $("#cobra-copy")?.addEventListener("click", () => copy(txt.value, "Mensagem copiada. É só colar no grupo."));
+  $("#cobra-new")?.addEventListener("click", () => { txt.value = cobrancaMsg(missingMembers(owner, votes)); syncWa(); });
+}
+
 /* ---- edições anteriores (somente leitura) ---- */
 const PAST_TABS = ["geral", "categorias", "ranking", "respostas"];
 async function fillYears() {
@@ -1998,7 +2144,7 @@ function refreshAdmin() {
   const R = tally(votes);
   const nDemo = votes.filter(v => v._demo).length;
   if (!API.on) $("#srcline").textContent = `Modo sem servidor: votos por código, guardados neste navegador. ${votes.length} votos válidos${nDemo ? ` (${nDemo} de simulação)` : ""}.${dupes ? ` ${dupes} envio(s) repetido(s) ignorado(s).` : ""}`;
-  else $("#srcline").textContent = A.err || `${votes.length - nDemo} votos recebidos${nDemo ? ` + ${nDemo} de simulação` : ""} · votação ${API.closed ? "encerrada" : "aberta"} · atualiza sozinho a cada 10 s${owner ? "" : " · resultados anônimos"}.`;
+  else $("#srcline").textContent = A.err || `${votes.length - nDemo} votos recebidos${nDemo ? ` + ${nDemo} de simulação` : ""} · votação ${STATE_TXT[voteState()].toLowerCase()} · atualiza sozinho a cada 10 s${owner ? "" : " · resultados anônimos"}.`;
 
   if (A.tab === "geral") {
     const sq = scaleQ(), yq = yesNoQ();
@@ -2007,7 +2153,7 @@ function refreshAdmin() {
     const rk = ranking(R);
     const canRemove = v => !v._demo && (API.on ? !!v.key : v._src === "código");
     const faltam = MEMBROS.filter(mb => !votes.some(v => !v._demo && norm(v.n) === norm(mb)));
-    body.innerHTML = `
+    body.innerHTML = votePanel(owner, votes) + `
       <div class="tiles">
         <div class="tile"><div class="v num">${votes.length}</div><div class="k">Votos</div></div>
         <div class="tile"><div class="v num">${nota && nota.avg != null ? nota.avg.toFixed(1).replace(".", ",") : "–"}</div><div class="k">Nota média da LABUM</div></div>
@@ -2028,6 +2174,7 @@ function refreshAdmin() {
         ${faltam.length && votes.length ? `<div class="missing"><span class="muted">Ainda não votaram:</span> ${faltam.map(n => `<span class="voter ghosted">${avatar(n, "vav")}${esc(n)}</span>`).join("")}</div>` : ""}
       </div>` : `<div class="panel"><h3>Seus poderes</h3><p class="muted">Você vê os resultados de forma anônima e pode conduzir a cerimônia. Ver quem votou em quem, apagar ou lançar votos, editar o formulário, encerrar a votação e gerenciar administradores são exclusivos do criador.</p></div>`}
       <div class="row"><a class="btn pink" href="#cerimonia">Abrir cerimônia de revelação</a></div>`;
+    bindVotePanel(owner, votes);
     // destino: todos menos o próprio dono do voto; quem já votou fica indisponível
     const raFill = () => {
       const sel = $("#ra-to"), from = $("#ra-from"); if (!sel || !from) return;
@@ -2175,7 +2322,7 @@ function refreshAdmin() {
     const real = votes.filter(v => !v._demo);
     body.innerHTML = `
       <div class="panel"><h3>Votação</h3>
-        ${API.on ? `<p class="muted">Status: <b>${API.closed ? "encerrada" : "aberta"}</b>. Encerrada, o formulário some para todo mundo e o servidor recusa novos votos.</p><button class="btn ${API.closed ? "gold" : "pink"}" id="toggle-close">${API.closed ? "Reabrir votação" : "Encerrar votação"}</button>`
+        ${API.on ? `<p class="muted" style="margin:0">Iniciar, encerrar, a data da contagem regressiva e ocultar premiações ficam no topo da <b>Visão geral</b>.</p>`
           : `<p class="muted" style="margin:0">No modo sem servidor, basta parar de aceitar códigos.</p>`}
       </div>
       ${API.on ? `<div class="panel"><h3>Resultados públicos</h3>
@@ -2318,6 +2465,9 @@ async function renderResults() {
     }).join("")}
     ${P.aval && (P.aval.nota != null || P.aval.ind) ? `<div class="section-title"><h2>Avaliação da LABUM</h2><span class="line"></span></div>
       <div class="tiles">${P.aval.nota != null ? `<div class="tile"><div class="v num">${String(P.aval.nota.toFixed(1)).replace(".", ",")}</div><div class="k">Nota média (${P.aval.notas} notas)</div></div>` : ""}${P.aval.ind ? `<div class="tile"><div class="v num">${pct(P.aval.sim, P.aval.ind)}%</div><div class="k">Indicariam a LABUM</div></div><div class="tile"><div class="v num">${100 - pct(P.aval.sim, P.aval.ind)}%</div><div class="k">Não indicariam</div></div>` : ""}</div>` : ""}
+    <div class="section-title" style="margin-top:34px"><h2>Cartinhas de ${esc(P.ano)}</h2><span class="line"></span></div>
+    <p class="muted" style="margin:-4px 0 14px">Toque no seu nome para baixar a cartinha com seus prêmios e números desta edição.</p>
+    <div class="mcards-row">${MEMBROS.map(n => `<button class="mc-mini" data-ycard="${esc(n)}">${avatar(n, "mc-f")}<b>${esc(n)}</b></button>`).join("")}</div>
     <div class="row" style="justify-content:center;margin-top:28px"><a class="btn gold" href="#hall">${ICON.trophy} Ver o Hall da Fama</a></div>
     <footer class="footer"><span>Publicado em ${new Date(P.t).toLocaleString("pt-BR")}. Ninguém vê em quem cada pessoa votou.</span><span>LABUM${REG} ${esc(P.ano)}</span></footer>
   </main>`;
@@ -2328,6 +2478,11 @@ async function renderResults() {
     b.disabled = true; const old = b.innerHTML; b.textContent = "Gerando…";
     try { await downloadCard(q, r); } catch (e) { console.error(e); toast("Não consegui gerar o card."); }
     b.disabled = false; b.innerHTML = old;
+  }));
+  $$("[data-ycard]").forEach(b => b.addEventListener("click", async () => {
+    HALL_STATE.extra = null; const H = await hallData();
+    if (!H.editions.some(e => String(e.ano) === String(P.ano))) { const ed = payloadToEd(P); H.editions.push(ed); }
+    openMemberCard(H, b.dataset.ycard, P.ano);
   }));
 }
 
@@ -2906,7 +3061,7 @@ function openMember(H, m) {
     <h3 class="mem-h">Maiores títulos</h3>
     ${tit.length ? `<ol class="mem-tit">${tit.map((x, k) => `<li><span class="mt-n num">${k + 1}</span><div><b>${esc(x.t)}</b><span class="muted">${x.anos.length > 1 ? x.anos.length + "× · " : ""}${[...x.anos].reverse().join(", ")}</span></div></li>`).join("")}</ol>`
       : `<p class="muted">Ainda sem troféus individuais. O próximo LABUM Awards pode mudar isso.</p>`}
-    ${t ? `<button class="btn sm ghost" data-full>${ICON.trophy} Ficha completa no Hall da Fama</button>` : ""}
+    <div class="row" style="gap:8px"><button class="btn sm gold" data-mcard>🃏 Ver minha cartinha</button>${t ? `<button class="btn sm ghost" data-full>${ICON.trophy} Ficha completa no Hall da Fama</button>` : ""}</div>
   </div>`;
   document.body.appendChild(el);
   const close = () => { document.removeEventListener("keydown", key, true); el.remove(); LB = null; };
@@ -2914,6 +3069,7 @@ function openMember(H, m) {
   el.addEventListener("click", e => { if (e.target === el) close(); });
   $("[data-x]", el).addEventListener("click", close);
   $("[data-full]", el)?.addEventListener("click", () => { close(); openFicha(H, m); });
+  $("[data-mcard]", el)?.addEventListener("click", () => { close(); openMemberCard(H, m); });
   document.addEventListener("keydown", key, true);
   LB = { el, key, back: document.activeElement };
   $("[data-x]", el).focus();
@@ -3627,12 +3783,12 @@ function rankSlide() {
   const rk = C.rk, P = CFG.premiacaoGeral;
   const col = (pos, cls) => {
     const p = rk[pos - 1]; const shown = C.phase >= 4 - pos;
-    return `<div class="col ${cls} ${shown ? "" : "hid"}"><div class="pod-face">${ffFig(shown && p ? p.nome : null, pos)}</div><div class="who">${p ? esc(p.nome) : "—"}</div><div class="meta">${p ? `${p.premios} prêmios · ${esc(P[pos - 1]?.dinheiro || "")}` : ""}</div><div class="block2">${pos}º</div></div>`;
+    return `<div class="col ${cls} ${shown ? "" : "hid"}"><div class="pod-face">${ffFig(shown && p ? p.nome : null, pos)}</div><div class="who">${p ? esc(p.nome) : "—"}</div><div class="meta">${p ? `${p.premios} prêmios${API.hidePrizes ? "" : " · " + esc(P[pos - 1]?.dinheiro || "")}` : ""}</div><div class="block2">${pos}º</div></div>`;
   };
   const notes = C.phase >= 3 ? rankTieNote(rk) : [];
   return `<div class="st-kicker">Ranking geral · prêmios nas categorias individuais</div><div class="st-cat small">Premiação geral</div>
     <div class="pod">${col(2, "c2")}${col(1, "c1")}${col(3, "c3")}</div>
-    ${C.phase >= 3 && P[0] && rk[0] ? `<p class="st-prize" style="margin-top:18px;max-width:70ch">${esc(rk[0].nome)} leva ${esc(P[0].dinheiro)}${(P[0].itens || []).length ? " + " + P[0].itens.map(esc).join(" + ") : ""}</p>` : ""}
+    ${C.phase >= 3 && P[0] && rk[0] && !API.hidePrizes ? `<p class="st-prize" style="margin-top:18px;max-width:70ch">${esc(rk[0].nome)} leva ${esc(P[0].dinheiro)}${(P[0].itens || []).length ? " + " + P[0].itens.map(esc).join(" + ") : ""}</p>` : ""}
     ${notes.length ? `<p class="st-help tie-note">${notes.map(esc).join("<br>")}</p>` : ""}`;
 }
 function endSlide() {
@@ -3814,6 +3970,136 @@ async function downloadCard(q, r) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
   toast("Card baixado");
+}
+
+/* =====================================================================
+   CARTINHA DO MEMBRO — estilo carta de jogo (1000 × 1400)
+   modo "carreira" (todo o histórico) ou de um ano (depois da divulgação)
+   ===================================================================== */
+const RARITY = [
+  { min: 92, nome: "LENDÁRIA", a: "#fff1c2", b: "#e8b94c", c: "#9a6a12", glow: "rgba(232,185,76,.55)" },
+  { min: 84, nome: "ÉPICA", a: "#ffd0e6", b: "#ff3d9a", c: "#8a1150", glow: "rgba(255,61,154,.5)" },
+  { min: 74, nome: "RARA", a: "#ffffff", b: "#c9ced8", c: "#5d6370", glow: "rgba(220,225,235,.4)" },
+  { min: 0, nome: "COMUM", a: "#ffd9b8", b: "#c4864f", c: "#6b3f1b", glow: "rgba(196,134,79,.4)" }
+];
+const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
+// números da carta (carreira ou um ano)
+function memberCardData(H, m, ano) {
+  const t = H.trophies.find(x => x.m === m) || { total: 0, cats: [] };
+  if (!ano) {
+    const mda = t.cats.filter(c => c.key === "membro-do-ano").length;
+    const champ = H.editions.filter(ed => (ed.ranking || [])[0]?.m === m).length;
+    const glory = t.cats.filter(c => HALL_GLORY.has(c.key)).length, shame = t.cats.filter(c => HALL_SHAME.has(c.key)).length;
+    const eds = new Set(t.cats.map(c => c.ano)).size;
+    const ovr = Math.round(clampN(58 + t.total * 1.5 + mda * 6 + champ * 4 + glory * .6, 50, 99));
+    return { ovr, sub: "CARREIRA", stats: [["TRO", t.total, "troféus"], ["MDA", mda, "membro do ano"], ["RNK", champ, "títulos do ranking"], ["GLO", glory, "glória"], ["VER", shame, "vergonha"], ["EDI", eds, "edições com troféu"]],
+      titles: memberTitles(H, m).map(x => [x.t, (x.anos.length > 1 ? x.anos.length + "× · " : "") + [...x.anos].reverse().join(", ")]) };
+  }
+  const ed = H.editions.find(e => String(e.ano) === String(ano)); if (!ed) return null;
+  const won = ed.cats.filter(c => (c.member || c.team) && c.winners.some(w => w.m === m || w.l === m));
+  const votos = ed.cats.reduce((s, c) => s + (c.rows || []).filter(x => x.m === m || x.l === m).reduce((a, x) => a + x.v, 0), 0);
+  const pos = (ed.ranking || []).findIndex(x => x.m === m) + 1;
+  const mda = won.some(c => c.key === "membro-do-ano") ? 1 : 0;
+  const glory = won.filter(c => HALL_GLORY.has(c.key)).length, shame = won.filter(c => HALL_SHAME.has(c.key)).length;
+  const ovr = Math.round(clampN(60 + won.length * 4.5 + mda * 10 + (pos === 1 ? 8 : pos === 2 ? 5 : pos === 3 ? 3 : 0), 50, 99));
+  const order = c => (c.key === "membro-do-ano" ? 0 : HALL_GLORY.has(c.key) ? 1 : HALL_SHAME.has(c.key) ? 3 : 2);
+  return { ovr, sub: String(ano), stats: [["PRE", won.length, "prêmios no ano"], ["POS", pos ? pos + "º" : "–", "no ranking"], ["VOT", votos, "votos recebidos"], ["GLO", glory, "glória"], ["VER", shame, "vergonha"], ["MDA", mda ? "SIM" : "–", "membro do ano"]],
+    titles: [...won].sort((a, b) => order(a) - order(b)).slice(0, 3).map(c => [c.t, c.tie && !c.decisao ? "empate" : `${(c.winners.find(w => w.m === m || w.l === m) || {}).v || ""} votos`]) };
+}
+async function buildMemberCard(H, m, ano) {
+  const D = memberCardData(H, m, ano); if (!D) return null;
+  const R = RARITY.find(r => D.ovr >= r.min);
+  const W = 1000, Hh = 1400, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const ctx = cv.getContext("2d");
+  try { await Promise.all([document.fonts.load("100px Anton"), document.fonts.load("700 40px 'Instrument Sans'")]); } catch {}
+  const DISPLAY = s => `${s}px Anton, Impact, "Arial Narrow", sans-serif`;
+  const BODY = (s, w = 700) => `${w} ${s}px "Instrument Sans", system-ui, sans-serif`;
+  const sp = v => { try { ctx.letterSpacing = v + "px"; } catch {} };
+  // moldura em degradê da raridade
+  let g = ctx.createLinearGradient(0, 0, W, Hh); g.addColorStop(0, R.a); g.addColorStop(.35, R.b); g.addColorStop(.7, R.c); g.addColorStop(1, R.b);
+  ctx.fillStyle = "#09080a"; ctx.fillRect(0, 0, W, Hh);
+  roundRect(ctx, 14, 14, W - 28, Hh - 28, 54); ctx.fillStyle = g; ctx.fill();
+  // brilho holográfico diagonal
+  ctx.save(); roundRect(ctx, 14, 14, W - 28, Hh - 28, 54); ctx.clip();
+  for (let i = -4; i < 14; i++) { ctx.fillStyle = i % 2 ? "rgba(255,255,255,.10)" : "rgba(255,255,255,.03)"; ctx.beginPath(); ctx.moveTo(i * 120, 0); ctx.lineTo(i * 120 + 60, 0); ctx.lineTo(i * 120 - 340, Hh); ctx.lineTo(i * 120 - 400, Hh); ctx.fill(); }
+  ctx.restore();
+  // miolo escuro
+  roundRect(ctx, 40, 40, W - 80, Hh - 80, 40); ctx.fillStyle = "#0d0b0f"; ctx.fill();
+  g = ctx.createRadialGradient(W / 2, 330, 40, W / 2, 330, 640); g.addColorStop(0, R.glow); g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.save(); roundRect(ctx, 40, 40, W - 80, Hh - 80, 40); ctx.clip(); ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh);
+  g = ctx.createRadialGradient(W, Hh, 20, W, Hh, 600); g.addColorStop(0, "rgba(255,61,154,.16)"); g.addColorStop(1, "rgba(255,61,154,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh);
+  ctx.restore();
+  // nota geral + selo
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = R.b; ctx.font = DISPLAY(150); sp(0); ctx.fillText(String(D.ovr), 168, 236);
+  ctx.font = BODY(26, 800); sp(6); ctx.fillStyle = "#fbf8f3"; ctx.fillText("GERAL", 168, 280);
+  try { const lg = await loadImage(IMGS.logo); ctx.drawImage(lg, 122, 304, 92, 92); } catch {}
+  ctx.font = BODY(22, 800); sp(4); ctx.fillStyle = R.b; ctx.fillText(D.sub, 168, 436);
+  // raridade (canto direito)
+  ctx.font = BODY(22, 800); sp(5); const rw = ctx.measureText(R.nome).width + 44;
+  roundRect(ctx, W - 80 - rw, 82, rw, 50, 25); ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fill(); ctx.strokeStyle = R.b; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = R.b; ctx.fillText(R.nome, W - 80 - rw / 2, 116);
+  // foto
+  const px = 300, py = 150, pw = 600, ph = 560;
+  ctx.save(); ctx.shadowColor = R.glow; ctx.shadowBlur = 50; roundRect(ctx, px - 8, py - 8, pw + 16, ph + 16, 46); ctx.fillStyle = R.b; ctx.fill(); ctx.restore();
+  try {
+    const img = await loadImage(memberPhoto(m));
+    ctx.save(); roundRect(ctx, px, py, pw, ph, 40); ctx.clip();
+    const s = Math.max(pw / img.width, ph / img.height), w = img.width * s, h = img.height * s;
+    ctx.drawImage(img, px + (pw - w) / 2, py + (ph - h) / 2, w, h);
+    const fade = ctx.createLinearGradient(0, py + ph * .6, 0, py + ph); fade.addColorStop(0, "rgba(13,11,15,0)"); fade.addColorStop(1, "rgba(13,11,15,.85)");
+    ctx.fillStyle = fade; ctx.fillRect(px, py, pw, ph); ctx.restore();
+  } catch {}
+  // nome e local
+  const nameFit = fitText(ctx, String(m).toUpperCase(), { font: DISPLAY, max: 128, min: 70, maxW: 840, maxLines: 1 });
+  ctx.font = DISPLAY(nameFit.size); sp(3); ctx.fillStyle = "#fbf8f3";
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.7)"; ctx.shadowBlur = 18; ctx.fillText(nameFit.lines[0], W / 2, 822); ctx.restore();
+  const loc = memInfo(m).local;
+  if (loc) { ctx.font = BODY(28, 700); sp(1); ctx.fillStyle = "#b8b0bd"; ctx.fillText("📍 " + loc, W / 2, 872); }
+  // atributos (2 colunas × 3)
+  ctx.strokeStyle = R.b; ctx.globalAlpha = .55; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(90, 912); ctx.lineTo(W - 90, 912); ctx.stroke(); ctx.beginPath(); ctx.moveTo(W / 2, 934); ctx.lineTo(W / 2, 1086); ctx.stroke(); ctx.globalAlpha = 1;
+  D.stats.forEach(([k, v], i) => {
+    const col = i % 2, row = Math.floor(i / 2); const x = col ? W / 2 + 70 : 140, y = 978 + row * 52;
+    ctx.textAlign = "left"; ctx.font = DISPLAY(46); sp(1); ctx.fillStyle = "#fbf8f3"; ctx.fillText(String(v), x, y);
+    const vw = ctx.measureText(String(v)).width; ctx.font = BODY(28, 800); sp(3); ctx.fillStyle = R.b; ctx.fillText(k, x + Math.max(vw, 70) + 18, y);
+  });
+  // títulos
+  ctx.textAlign = "center"; ctx.font = BODY(22, 800); sp(6); ctx.fillStyle = R.b; ctx.fillText(ano ? `CONQUISTAS DE ${ano}` : "MAIORES TÍTULOS", W / 2, 1140);
+  const tl = D.titles.length ? D.titles : [["Ainda sem troféus", "a próxima edição pode mudar isso"]];
+  tl.slice(0, 3).forEach(([t, s2], i) => {
+    const y = 1186 + i * 52; ctx.textAlign = "left";
+    ctx.beginPath(); ctx.arc(118, y - 10, 17, 0, Math.PI * 2); ctx.fillStyle = i === 0 ? R.b : "rgba(255,255,255,.14)"; ctx.fill();
+    ctx.font = BODY(20, 800); sp(0); ctx.fillStyle = i === 0 ? "#140f15" : "#fbf8f3"; ctx.textAlign = "center"; ctx.fillText(String(i + 1), 118, y - 3);
+    ctx.textAlign = "left"; const tt = fitText(ctx, t, { font: s => BODY(s, 800), max: 30, min: 20, maxW: 520, maxLines: 1 });
+    ctx.font = BODY(tt.size, 800); ctx.fillStyle = "#fbf8f3"; let line = tt.lines[0]; while (ctx.measureText(line).width > 520 && line.length > 4) line = line.slice(0, -2) + "…"; ctx.fillText(line, 150, y);
+    ctx.textAlign = "right"; ctx.font = BODY(22, 600); ctx.fillStyle = "#b8b0bd"; ctx.fillText(s2, W - 100, y);
+  });
+  // rodapé
+  ctx.textAlign = "center"; ctx.font = BODY(19, 800); sp(5); ctx.fillStyle = "rgba(251,248,243,.55)";
+  ctx.fillText(`LABUM AWARDS · ${ano ? CFG.edicao.toUpperCase() : "HALL DA FAMA"} · #${String(MEMBROS.indexOf(m) + 1).padStart(2, "0")}/${MEMBROS.length}`, W / 2, Hh - 72);
+  sp(0);
+  return cv;
+}
+// prévia em janela + botão de baixar
+async function openMemberCard(H, m, ano) {
+  closeLightbox();
+  const el = document.createElement("div");
+  el.className = "lb"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Cartinha de " + m);
+  el.innerHTML = `<button class="btn sm x" data-x>Fechar ✕</button><div class="mcard-prev"><p class="muted">Montando a cartinha…</p></div>`;
+  document.body.appendChild(el);
+  const close = () => { document.removeEventListener("keydown", key, true); el.remove(); LB = null; };
+  const key = e => { if (e.key === "Escape") close(); };
+  el.addEventListener("click", e => { if (e.target === el) close(); });
+  $("[data-x]", el).addEventListener("click", close);
+  document.addEventListener("keydown", key, true);
+  LB = { el, key, back: document.activeElement };
+  const cv = await buildMemberCard(H, m, ano);
+  if (!el.isConnected) return;
+  if (!cv) { $(".mcard-prev", el).innerHTML = `<p class="muted">Sem dados de ${esc(ano)} para ${esc(m)}.</p>`; return; }
+  const blob = await new Promise(ok => cv.toBlob(ok, "image/png")); const url = URL.createObjectURL(blob);
+  const fname = `labum-cartinha-${norm(m).replace(/[^a-z0-9]+/g, "-")}${ano ? "-" + ano : ""}.png`;
+  $(".mcard-prev", el).innerHTML = `<img src="${url}" alt="Cartinha de ${esc(m)}"><div class="row" style="justify-content:center;gap:8px"><a class="btn gold" href="${url}" download="${fname}">${ICON.down} Baixar cartinha</a>${navigator.canShare && navigator.canShare({ files: [new File([blob], fname, { type: "image/png" })] }) ? `<button class="btn ghost" data-share>Compartilhar</button>` : ""}</div>`;
+  $("[data-share]", el)?.addEventListener("click", () => navigator.share({ files: [new File([blob], fname, { type: "image/png" })], title: "LABUM Awards" }).catch(() => {}));
 }
 
 /* ---------- som sintetizado (sem arquivos) ---------- */
